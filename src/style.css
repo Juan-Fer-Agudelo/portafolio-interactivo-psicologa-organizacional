@@ -825,3 +825,12 @@ a {
   width: 1.2em;
   height: 1.2em;
 }
+
+/* campo trampa contra robots */
+.honey {
+  position: absolute;
+  left: -9999px;
+  width: 1px;
+  height: 1px;
+  opacity: 0;
+}

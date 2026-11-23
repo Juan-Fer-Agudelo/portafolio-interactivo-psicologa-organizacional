@@ -139,12 +139,33 @@ tabs.forEach((tab) => {
 });
 
 /* ---------- Formulario de contacto ---------- */
-// MODO DEMO: el formulario todavía no envía correos.
-// Conecta aquí tu servicio (EmailJS, Formspree, un backend propio...) dentro de sendMessage().
+// Los mensajes se envían por FormSubmit (https://formsubmit.co) al correo de abajo.
+// No necesita cuenta: la primera vez FormSubmit manda a ese correo un enlace de
+// activación, y hasta que se confirme no se entrega ningún mensaje.
+const CONTACT_EMAIL = 'maria.antoniachica24@gmail.com';
+const CONTACT_ENDPOINT = `https://formsubmit.co/ajax/${CONTACT_EMAIL}`;
+
 async function sendMessage(data) {
-  console.info('Mensaje de contacto (modo demo, no enviado):', data);
-  await new Promise((resolve) => setTimeout(resolve, 700));
-  return { demo: true };
+  // Campo trampa: solo lo rellenan los robots. Se finge éxito y no se envía nada.
+  if (data._honey) return { ok: true };
+  const response = await fetch(CONTACT_ENDPOINT, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', Accept: 'application/json' },
+    body: JSON.stringify({
+      name: data.name,
+      email: data.email,
+      message: data.message,
+      _subject: `Nuevo mensaje desde tu portafolio: ${data.name}`,
+      _replyto: data.email,
+      _template: 'table',
+      _captcha: 'false',
+    }),
+  });
+  const result = await response.json().catch(() => ({}));
+  const text = String(result.message || '');
+  if (/activ/i.test(text)) return { ok: false, needsActivation: true };
+  if (!response.ok || String(result.success) !== 'true') throw new Error(text || 'Error de envío');
+  return { ok: true };
 }
 
 const form = $('#contact-form');
@@ -157,14 +178,18 @@ form.addEventListener('submit', async (e) => {
   formMessage.textContent = '';
   try {
     const result = await sendMessage(Object.fromEntries(new FormData(form)));
-    formMessage.style.color = result.demo ? '#9a6b12' : '#2f7a4d';
-    formMessage.textContent = result.demo
-      ? 'Modo demo: el formulario aún no está conectado a un servicio de correo.'
-      : '¡Mensaje enviado con éxito!';
-    form.reset();
+    if (result.needsActivation) {
+      formMessage.style.color = '#9a6b12';
+      formMessage.textContent =
+        'El formulario aún no está activado. Mientras tanto, escríbeme directamente al correo.';
+    } else {
+      formMessage.style.color = '#2f7a4d';
+      formMessage.textContent = '¡Mensaje enviado! Te responderé pronto.';
+      form.reset();
+    }
   } catch {
     formMessage.style.color = '#b3412b';
-    formMessage.textContent = 'No se pudo enviar el mensaje. Inténtalo de nuevo más tarde.';
+    formMessage.textContent = 'No se pudo enviar el mensaje. Inténtalo de nuevo o escríbeme al correo.';
   } finally {
     submitButton.disabled = false;
     submitButton.textContent = 'Enviar mensaje';
