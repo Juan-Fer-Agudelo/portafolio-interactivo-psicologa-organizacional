@@ -37,6 +37,8 @@ const C = {
 };
 
 const FLOOR_Y = -10.3;
+const CAT_LEAN = 1.2; // cuánto se tumba el tronco del gato al andar en cuatro patas
+const CAT_WALK_Y = 0.42; // altura del tronco al caminar
 const DESK_TOP_Y = -6.3;
 const SHELF_TOP_Y = -0.58;
 
@@ -312,6 +314,7 @@ export class Room {
   buildCat(x, y, z, scale) {
     const cat = new THREE.Group();
     cat.position.set(x, y, z);
+    cat.rotation.order = 'YXZ'; // primero gira hacia donde va, luego se inclina
     cat.rotation.y = 0.12;
     cat.scale.setScalar(scale);
     this.group.add(cat);
@@ -345,11 +348,30 @@ export class Room {
     back.scale.set(1, 1.15, 0.85);
 
     // Patas delanteras
-    [-0.13, 0.13].forEach((px) => {
-      const leg = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.36, 6, 14), this.catBase));
-      leg.position.set(px, 0.3, 0.22);
-      this.catBody.add(leg);
-      sphere(this.catFeet, 0.1, this.catBase, px, 0.075, 0.27).scale.set(1, 0.72, 1.25);
+    this.catArms = [-0.13, 0.13].map((px) => {
+      const arm = new THREE.Group();
+      arm.position.set(px, 0.56, 0.2);
+      this.catBody.add(arm);
+      const upper = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.36, 6, 14), this.catBase));
+      upper.position.set(0, -0.26, 0.02);
+      arm.add(upper);
+      sphere(arm, 0.1, this.catBase, 0, -0.485, 0.07).scale.set(1, 0.72, 1.25);
+      return arm;
+    });
+
+    // Piernas para caminar erguido (ocultas mientras está sentado o dormido)
+    this.catLegs = new THREE.Group();
+    this.catLegs.scale.setScalar(0.001);
+    cat.add(this.catLegs);
+    this.catLegPivots = [-0.14, 0.14].map((px) => {
+      const leg = new THREE.Group();
+      leg.position.set(px, 0.34, 0);
+      this.catLegs.add(leg);
+      const thigh = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.16, 6, 14), this.catBase));
+      thigh.position.y = -0.15;
+      leg.add(thigh);
+      sphere(leg, 0.1, this.catBase, 0, -0.28, 0.05).scale.set(1, 0.62, 1.45);
+      return leg;
     });
 
     // Patas traseras con almohadillas
@@ -440,102 +462,193 @@ export class Room {
     this.catHeadMat.map = open ? coat.faceOpen : coat.faceClosed;
   }
 
-  /** Postura: sentado, o dormido de lado en la cama. */
+  /** Postura: sentado, caminando en cuatro patas, o dormido de lado en la cama. */
   setCatPose(pose, duration = 0.35) {
     const sleep = pose === 'sleep';
+    const walk = pose === 'walk';
     const ease = 'power2.inOut';
-    gsap.to(this.catBody.rotation, { z: sleep ? -1.25 : 0, duration, ease });
-    gsap.to(this.catBody.position, { x: sleep ? -0.5 : 0, y: sleep ? 0.3 : 0, duration, ease });
-    gsap.to(this.catHead.rotation, { z: sleep ? 0.6 : 0, duration, ease });
-    const feet = sleep ? 0.001 : 1;
-    gsap.to(this.catFeet.scale, { x: feet, y: feet, z: feet, duration, ease });
-    gsap.to(this.catTail.position, { y: sleep ? 0.3 : 0.14, duration, ease });
+    const scaleTo = (obj, v) => gsap.to(obj.scale, { x: v, y: v, z: v, duration, ease });
+    // En cuatro patas el tronco se tumba hacia adelante y la cabeza se endereza
+    gsap.to(this.catBody.rotation, { x: walk ? CAT_LEAN : 0, z: sleep ? -1.25 : 0, duration, ease });
+    gsap.to(this.catBody.position, {
+      x: sleep ? -0.5 : 0,
+      y: sleep ? 0.3 : walk ? CAT_WALK_Y : 0,
+      z: walk ? -0.35 : 0,
+      duration,
+      ease,
+    });
+    gsap.to(this.catHead.rotation, { x: walk ? -1.0 : 0, z: sleep ? 0.6 : 0, duration, ease });
+    scaleTo(this.catFeet, pose === 'sit' ? 1 : 0.001); // patas traseras de la postura sentada
+    scaleTo(this.catLegs, walk ? 1 : 0.001); // patas traseras para caminar
+    gsap.to(this.catLegs.position, { z: walk ? -0.3 : 0, duration, ease });
+    gsap.to(this.catTail.position, { y: sleep ? 0.3 : walk ? 0.5 : 0.14, z: walk ? -0.62 : -0.18, duration, ease });
+    // Las patas delanteras cuelgan del tronco: se compensan para que apunten al suelo
+    this.catArms.forEach((arm) => gsap.to(arm.rotation, { x: walk ? -CAT_LEAN : 0, z: 0, duration, ease }));
+    this.catLegPivots.forEach((leg) => gsap.to(leg.rotation, { x: 0, duration, ease }));
   }
 
-  /** Salta de su lugar actual al lugar indicado (0 repisa, 1 escritorio, 2 cama). */
-  jumpCat(to) {
+  /** Un fotograma del trote: cada pata delantera va con la trasera del lado opuesto. */
+  catWalkFrame(phase) {
+    const swing = Math.sin(phase);
+    this.catArms[0].rotation.x = -CAT_LEAN + swing * 0.55;
+    this.catArms[1].rotation.x = -CAT_LEAN - swing * 0.55;
+    this.catLegPivots[0].rotation.x = -swing * 0.6;
+    this.catLegPivots[1].rotation.x = swing * 0.6;
+    this.catBody.position.y = CAT_WALK_Y + Math.abs(Math.cos(phase)) * 0.03;
+    this.cat.rotation.z = swing * 0.035;
+    this.catTail.rotation.y = swing * 0.3;
+  }
+
+  /** Recorridos entre lugares, como tramos caminando o saltos cortos entre apoyos. */
+  catRoute(from, to) {
+    const P = (x, y, z) => new THREE.Vector3(x, y, z);
+    const FRAME_TOP = -0.56; // borde superior del cuadro de Formación
+    const MONITOR_TOP = DESK_TOP_Y + 2.89; // encima del monitor izquierdo
+    const TREE_TOP = FLOOR_Y + 2.0; // plataforma del rascador
+    const routes = {
+      // repisa → cuadro → monitor → escritorio
+      '0-1': [
+        ['walk', P(-0.5, SHELF_TOP_Y, 1.0)],
+        ['hop', P(0.4, FRAME_TOP, 0.2)],
+        ['walk', P(1.5, FRAME_TOP, 0.2)],
+        ['hop', P(0.5, MONITOR_TOP, 0.95)],
+        ['hop', P(1.3, DESK_TOP_Y, 2.5)],
+        ['walk', this.catSpots[1].pos],
+      ],
+      // escritorio → rascador → piso → cama
+      '1-2': [
+        ['walk', P(3.4, DESK_TOP_Y, 2.9)],
+        ['hop', P(3.75, TREE_TOP, 3.8)],
+        ['hop', P(2.3, FLOOR_Y, 3.0)],
+        ['walk', P(-1.4, FLOOR_Y, 2.6)],
+        ['hop', this.catSpots[2].pos],
+      ],
+    };
+    const key = `${from}-${to}`;
+    if (routes[key]) return routes[key].map(([mode, pos]) => ({ mode, pos: pos.clone() }));
+    // Camino de vuelta: los mismos tramos en orden inverso
+    const forward = routes[`${to}-${from}`];
+    const points = [this.catSpots[to].pos, ...forward.map(([, pos]) => pos)];
+    const reversed = [];
+    for (let i = forward.length - 1; i >= 0; i--) {
+      reversed.push({ mode: forward[i][0], pos: points[i].clone() });
+    }
+    return reversed;
+  }
+
+  /** Lleva al gato caminando en cuatro patas hasta el lugar vecino (0 repisa, 1 escritorio, 2 cama). */
+  moveCat(to) {
     const cat = this.cat;
+    const fromSpot = this.catSpot;
     const dest = this.catSpots[to];
-    const start = cat.position.clone();
+    const route = this.catRoute(fromSpot, to);
     const startScale = cat.scale.x;
-
-    // --- Trayectoria balística: velocidad horizontal constante y gravedad real ---
+    const WALK_SPEED = 2.6; // unidades por segundo
     const GRAVITY = 15;
-    const goingUp = dest.pos.y > start.y;
-    // Altura máxima del salto: un impulso corto al bajar, uno mayor al subir
-    const apex = Math.max(start.y, dest.pos.y) + (goingUp ? 0.9 : 0.55);
-    const tUp = Math.sqrt((2 * (apex - start.y)) / GRAVITY);
-    const tDown = Math.sqrt((2 * (apex - dest.pos.y)) / GRAVITY);
-    const flight = tUp + tDown;
-    const v0 = GRAVITY * tUp; // velocidad vertical de despegue
-    const dx = dest.pos.x - start.x;
-    const dz = dest.pos.z - start.z;
-    const speedH = Math.hypot(dx, dz) / flight;
-    const heading = Math.atan2(dx, dz); // hacia dónde mira mientras vuela
-    const landingSpeed = GRAVITY * tDown;
-    // Cuanto más fuerte cae, más se aplasta al aterrizar
-    const squash = THREE.MathUtils.clamp(1 - landingSpeed * 0.03, 0.68, 0.88);
-
-    const state = { time: 0 };
-    this.catJumping = true;
-    this.setCatPose('sit', 0.2);
-    this.setCatEyes(true);
-    cat.rotation.order = 'YXZ'; // primero gira hacia el destino, luego cabecea
-
     const body = this.catBody.scale;
-    const tail = this.catTail.rotation;
 
-    gsap
-      .timeline({
-        onComplete: () => {
-          this.catSpot = to;
-          this.catJumping = false;
-          this.setCatEyes(dest.eyesOpen);
-          this.setCatPose(dest.pose, 0.6);
-        },
-      })
-      // 1. Mira hacia donde va a saltar
-      .to(this.catHead.rotation, { y: Math.sign(dx || 1) * 0.5, duration: 0.18, ease: 'power2.out' })
-      .to(cat.rotation, { y: heading * 0.85, duration: 0.28, ease: 'power2.inOut' })
-      .to(this.catHead.rotation, { y: 0, duration: 0.2, ease: 'power2.out' }, '<')
-      // 2. Anticipación: se agacha y carga el salto
-      .to(body, { y: 0.72, x: 1.1, z: 1.1, duration: 0.22, ease: 'power2.out' })
-      .to(tail, { x: -0.5, duration: 0.22, ease: 'power2.out' }, '<')
-      // 3. Despegue: se estira de golpe
-      .to(body, { y: 1.18, x: 0.93, z: 0.93, duration: 0.07, ease: 'power3.out' })
-      // 4. Vuelo
-      .to(state, {
-        time: flight,
-        duration: flight,
-        ease: 'none',
-        onUpdate: () => {
-          const t = state.time;
-          const k = t / flight;
-          const vy = v0 - GRAVITY * t;
-          cat.position.set(start.x + dx * k, start.y + v0 * t - 0.5 * GRAVITY * t * t, start.z + dz * k);
-          cat.scale.setScalar(THREE.MathUtils.lerp(startScale, dest.scale, k));
-          // El cuerpo sigue la dirección de la velocidad: sube de frente y cae de cabeza
-          const pitch = -Math.atan2(vy, Math.max(speedH, 0.001)) * 0.65;
-          cat.rotation.x = THREE.MathUtils.clamp(pitch, -0.9, 1.05);
-          // Estirado al subir y al caer, recogido en lo más alto
-          const stretch = 1 + Math.min(Math.abs(vy) * 0.02, 0.18);
-          body.set(2 - stretch, stretch, 2 - stretch);
-          // La cola se retrasa respecto al cuerpo
-          tail.x = THREE.MathUtils.clamp(vy * 0.08, -0.7, 0.7);
-        },
-      })
-      // 5. Aterrizaje: se aplasta, rebota y se asienta
-      .to(body, { y: squash, x: 2 - squash, z: 2 - squash, duration: 0.07, ease: 'power2.out' })
-      .to(cat.rotation, { x: 0, duration: 0.12, ease: 'power2.out' }, '<')
-      .to(body, { y: 1, x: 1, z: 1, duration: 0.55, ease: 'elastic.out(1, 0.45)' })
-      .to(tail, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.5)' }, '<')
-      // 6. Se acomoda mirando al frente
-      .to(cat.rotation, { y: dest.rotY, duration: 0.4, ease: 'power2.inOut' }, '<0.1');
+    this.catJumping = true;
+    this.setCatEyes(true);
+    this.setCatPose('walk', 0.3); // se pone en cuatro patas
+
+    const tl = gsap.timeline({
+      onComplete: () => {
+        this.catSpot = to;
+        this.catJumping = false;
+        this.setCatEyes(dest.eyesOpen);
+        this.setCatPose(dest.pose, 0.5);
+      },
+    });
+    tl.to({}, { duration: 0.34 });
+
+    let from = cat.position.clone();
+    route.forEach((segment, index) => {
+      const a = from.clone();
+      const b = segment.pos.clone();
+      const dx = b.x - a.x;
+      const dz = b.z - a.z;
+      const heading = Math.atan2(dx, dz);
+      const scaleAt = (k) => THREE.MathUtils.lerp(startScale, dest.scale, (index + k) / route.length);
+      const state = { k: 0 };
+
+      // Gira hacia donde va
+      tl.to(cat.rotation, { y: heading, duration: 0.2, ease: 'power2.inOut' });
+
+      if (segment.mode === 'walk') {
+        const distance = a.distanceTo(b);
+        const stride = 7 / scaleAt(0.5); // radianes de ciclo por unidad recorrida
+        tl.to(state, {
+          k: 1,
+          duration: distance / WALK_SPEED,
+          ease: 'none',
+          onUpdate: () => {
+            cat.position.lerpVectors(a, b, state.k);
+            cat.scale.setScalar(scaleAt(state.k));
+            this.catWalkFrame(state.k * distance * stride);
+          },
+        });
+        // Se detiene: recoge piernas y brazos
+        tl.add(() => {
+          this.catLegPivots.forEach((leg) => gsap.to(leg.rotation, { x: 0, duration: 0.15 }));
+          this.catArms.forEach((arm) => gsap.to(arm.rotation, { x: -CAT_LEAN, duration: 0.15 }));
+          gsap.to(cat.rotation, { z: 0, duration: 0.15 });
+          gsap.to(this.catBody.position, { y: CAT_WALK_Y, duration: 0.15 });
+        });
+        tl.to({}, { duration: 0.1 });
+      } else {
+        // Salto corto con gravedad entre dos apoyos, estirado como un gato
+        const rising = b.y > a.y;
+        const apex = Math.max(a.y, b.y) + (rising ? 0.45 : 0.35);
+        const speedH = Math.hypot(dx, dz);
+        const tUp = Math.sqrt((2 * (apex - a.y)) / GRAVITY);
+        const tDown = Math.sqrt((2 * (apex - b.y)) / GRAVITY);
+        const flight = tUp + tDown;
+        const v0 = GRAVITY * tUp;
+        const squash = THREE.MathUtils.clamp(1 - GRAVITY * tDown * 0.025, 0.74, 0.9);
+
+        // Se recoge y se impulsa: patas delanteras al frente, traseras atrás
+        tl.to(body, { y: 0.85, duration: 0.13, ease: 'power2.out' });
+        tl.to(body, { y: 1.1, duration: 0.05, ease: 'power3.out' });
+        tl.add(() => {
+          this.catArms.forEach((arm) => gsap.to(arm.rotation, { x: -CAT_LEAN - 0.85, duration: 0.14 }));
+          this.catLegPivots.forEach((leg) => gsap.to(leg.rotation, { x: 0.8, duration: 0.14 }));
+        }, '<');
+        tl.to(state, {
+          k: 1,
+          duration: flight,
+          ease: 'none',
+          onUpdate: () => {
+            const t = state.k * flight;
+            const vy = v0 - GRAVITY * t;
+            cat.position.set(a.x + dx * state.k, a.y + v0 * t - 0.5 * GRAVITY * t * t, a.z + dz * state.k);
+            cat.scale.setScalar(scaleAt(state.k));
+            // El cuerpo apunta hacia donde va: nariz arriba al subir, abajo al caer
+            const pitch = -Math.atan2(vy, Math.max(speedH / flight, 0.6)) * 0.6;
+            cat.rotation.x = THREE.MathUtils.clamp(pitch, -0.75, 0.85);
+            this.catTail.rotation.x = THREE.MathUtils.clamp(vy * 0.07, -0.6, 0.6);
+          },
+        });
+        // Aterriza: recoge las patas bajo el cuerpo
+        tl.add(() => {
+          this.catArms.forEach((arm) => gsap.to(arm.rotation, { x: -CAT_LEAN, duration: 0.14 }));
+          this.catLegPivots.forEach((leg) => gsap.to(leg.rotation, { x: 0, duration: 0.12 }));
+          gsap.to(this.catTail.rotation, { x: 0, duration: 0.4, ease: 'elastic.out(1, 0.5)' });
+        });
+        tl.to(body, { y: squash, duration: 0.07, ease: 'power2.out' });
+        tl.to(cat.rotation, { x: 0, duration: 0.1 }, '<');
+        tl.to(body, { y: 1, duration: 0.3, ease: 'elastic.out(1, 0.5)' });
+      }
+      from = b;
+    });
+
+    // Se acomoda mirando al frente antes de sentarse o acostarse
+    tl.to(cat.rotation, { y: dest.rotY, x: 0, z: 0, duration: 0.3, ease: 'power2.inOut' });
   }
 
   updateCat(elapsed, scroll) {
     const want = scroll < 0.3 ? 0 : scroll < 0.8 ? 1 : 2;
-    if (!this.catJumping && want !== this.catSpot) this.jumpCat(want);
+    // Avanza de a un lugar por vez, pasando siempre por el escritorio
+    if (!this.catJumping && want !== this.catSpot) this.moveCat(this.catSpot + Math.sign(want - this.catSpot));
     this.catTail.rotation.y = Math.sin(elapsed * 1.6) * 0.35;
     if (!this.catJumping) {
       const asleep = this.catSpots[this.catSpot].pose === 'sleep';
@@ -768,6 +881,14 @@ export class Room {
     this.group.add(bed);
     cyl(bed, 1.25, 1.3, 0.6, std('#7a3420', { roughness: 1 }), 0, 0.3, 0, 36);
     cyl(bed, 1.0, 1.0, 0.12, std(C.terracotta, { roughness: 1 }), 0, 0.58, 0, 36);
+
+    // Rascador: el gato lo usa de escalón entre el escritorio y el piso
+    const tree = new THREE.Group();
+    tree.position.set(3.75, FLOOR_Y, 3.8);
+    this.group.add(tree);
+    cyl(tree, 0.85, 0.9, 0.14, std(C.terracotta, { roughness: 1 }), 0, 0.07, 0, 36);
+    cyl(tree, 0.2, 0.2, 1.78, std('#c9a36a', { roughness: 1 }), 0, 1.0, 0, 20);
+    cyl(tree, 0.82, 0.82, 0.16, std(C.terracotta, { roughness: 1 }), 0, 1.92, 0, 36);
 
     // --- Sobre en el piso (Contacto) ---
     const mail = new THREE.Group();
