@@ -257,7 +257,7 @@ const SIGN_FONT = '"League Spartan", "Arial Black", "Trebuchet MS", sans-serif';
  * Letrero de la pared. Con `shadow` devuelve la sombra difuminada que proyecta;
  * sin él, las letras lisas en blanco para un material que recibe la luz de la lámpara.
  */
-export function signTexture(shadow = false) {
+export function signTexture(shadow = false, lit = true) {
   return tex(2000, 1066, (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
     ctx.textAlign = 'center';
@@ -284,7 +284,7 @@ export function signTexture(shadow = false) {
     line('¡HOLA! SOY', 370, big, 800, 6);
     line('MARÍA ANTONIA', 370 + big * 1.12, big, 800, 6);
     line('Psicóloga · Generalista de Recursos Humanos', 930, fit('Psicóloga · Generalista de Recursos Humanos', 92, 700, 2), 700, 2);
-    if (!shadow) {
+    if (!shadow && lit) {
       // Resplandor de la lámpara: tiñe de naranja las letras más cercanas a ella
       ctx.globalCompositeOperation = 'source-atop';
       const glow = ctx.createRadialGradient(w * 0.5, h * 1.12, h * 0.1, w * 0.5, h * 1.12, h * 0.95);

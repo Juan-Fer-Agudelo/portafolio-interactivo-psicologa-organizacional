@@ -173,6 +173,9 @@ export class Room {
     this.group.add(sign);
     const geometry = new THREE.PlaneGeometry(2.9, 1.547);
     const letters = signTexture();
+    // Con la lámpara encendida y apagada (sin el tinte naranja)
+    this.signTextures = { on: letters, off: signTexture(false, false) };
+    this.signMaterials = [];
 
     // Sombra suave sobre el papel tapiz
     const cast = new THREE.Mesh(
@@ -200,6 +203,7 @@ export class Room {
           transparent: front,
         })
       );
+      this.signMaterials.push(layer.material);
       layer.position.z = 0.02 + i * 0.008;
       sign.add(layer);
     }
@@ -287,6 +291,38 @@ export class Room {
     this.lampLight = new THREE.PointLight('#ffb866', 7, 9, 2);
     this.lampLight.position.set(0.1, 0.9, 1.3);
     lamp.add(this.lampLight);
+
+    // Clic en la lámpara: se apaga y se vuelve a encender
+    this.lampOn = true;
+    this.lampParts = { shade: shade.material, core: core.material, halo: halo.material };
+    this.lampTarget = this.addTarget({
+      group: lamp,
+      size: [1.0, 1.4, 0.9],
+      offset: [0, 0.7, 0],
+      label: 'Apagar lámpara',
+      onClick: () => this.toggleLamp(),
+    });
+  }
+
+  toggleLamp() {
+    const on = (this.lampOn = !this.lampOn);
+    const duration = on ? 0.25 : 0.4;
+    const color = (material, hex) => {
+      const c = new THREE.Color(hex);
+      gsap.to(material.color, { r: c.r, g: c.g, b: c.b, duration });
+    };
+    gsap.to(this.lampLight, { intensity: on ? 7 : 0, duration });
+    gsap.to(this.signGlow, { intensity: on ? 2 : 0, duration });
+    gsap.to(this.lampParts.halo, { opacity: on ? 0.6 : 0, duration });
+    color(this.lampParts.shade, on ? '#ffc24a' : '#a8843f');
+    color(this.lampParts.core, on ? '#fffbea' : '#8a7350');
+    this.lampParts.shade.toneMapped = this.lampParts.core.toneMapped = !on;
+    this.lampParts.shade.needsUpdate = this.lampParts.core.needsUpdate = true;
+    const letters = on ? this.signTextures.on : this.signTextures.off;
+    this.signMaterials.forEach((material) => {
+      material.map = material.emissiveMap = letters;
+    });
+    this.lampTarget.label = on ? 'Apagar lámpara' : 'Encender lámpara';
   }
 
   buildClock(x, y, scale) {
