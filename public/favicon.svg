@@ -1,11 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
-  <rect width="64" height="64" rx="14" fill="#b5562f"/>
+  <!-- Insignia con forma de cabeza de gato y las iniciales AC -->
+  <path
+    d="M6 27 L8 7 Q9 2 13 5 L26 14 H38 L51 5 Q55 2 56 7 L58 27 V46 Q58 61 43 61 H21 Q6 61 6 46 Z"
+    fill="#b5562f"
+  />
+  <path d="M12 10 L23 17 L12 24 Z" fill="#e9b44c" />
+  <path d="M52 10 L41 17 L52 24 Z" fill="#e9b44c" />
   <text
     x="32"
-    y="44"
+    y="51"
     text-anchor="middle"
     font-family="'Arial Rounded MT Bold', 'Trebuchet MS', Arial, Helvetica, sans-serif"
-    font-size="34"
+    font-size="27"
     font-weight="800"
     letter-spacing="-1"
     fill="#fbf5ea"

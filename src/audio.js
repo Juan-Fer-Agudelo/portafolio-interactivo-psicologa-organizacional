@@ -99,3 +99,47 @@ export class Ambient {
     return this.playing;
   }
 }
+
+/* ---------- Efectos ---------- */
+let fxContext = null;
+
+/** Clic de interruptor al encender (más agudo) o apagar (más grave) una luz. */
+export function playSwitch(on) {
+  try {
+    fxContext ||= new (window.AudioContext || window.webkitAudioContext)();
+    const ctx = fxContext;
+    if (ctx.state === 'suspended') ctx.resume();
+    const now = ctx.currentTime;
+    const out = ctx.createGain();
+    out.gain.value = 0.5;
+    out.connect(ctx.destination);
+
+    // Chasquido: ráfaga muy corta de ruido filtrado
+    const length = Math.floor(ctx.sampleRate * 0.03);
+    const buffer = ctx.createBuffer(1, length, ctx.sampleRate);
+    const data = buffer.getChannelData(0);
+    for (let i = 0; i < length; i++) data[i] = (Math.random() * 2 - 1) * (1 - i / length) ** 3;
+    const noise = ctx.createBufferSource();
+    noise.buffer = buffer;
+    const band = ctx.createBiquadFilter();
+    band.type = 'bandpass';
+    band.frequency.value = on ? 3200 : 1900;
+    band.Q.value = 1.2;
+    noise.connect(band).connect(out);
+    noise.start(now);
+
+    // Golpe seco del mecanismo
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+    osc.type = 'triangle';
+    osc.frequency.setValueAtTime(on ? 420 : 260, now);
+    osc.frequency.exponentialRampToValueAtTime(on ? 180 : 90, now + 0.06);
+    gain.gain.setValueAtTime(0.5, now);
+    gain.gain.exponentialRampToValueAtTime(0.001, now + 0.09);
+    osc.connect(gain).connect(out);
+    osc.start(now);
+    osc.stop(now + 0.1);
+  } catch {
+    // Sin audio disponible: la luz cambia igual, en silencio
+  }
+}

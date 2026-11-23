@@ -1,5 +1,6 @@
 import * as THREE from 'three';
 import gsap from 'gsap';
+import { playSwitch } from '../audio.js';
 import { RoundedBoxGeometry } from 'three/addons/geometries/RoundedBoxGeometry.js';
 import {
   floorTexture,
@@ -306,6 +307,7 @@ export class Room {
 
   toggleLamp() {
     const on = (this.lampOn = !this.lampOn);
+    playSwitch(on);
     const duration = on ? 0.25 : 0.4;
     const color = (material, hex) => {
       const c = new THREE.Color(hex);
@@ -921,6 +923,16 @@ export class Room {
   }
 
   /* ---------- Parada 3: debajo del escritorio ---------- */
+  toggleNightLight() {
+    const on = (this.nightOn = !this.nightOn);
+    playSwitch(on);
+    const duration = on ? 0.25 : 0.4;
+    const c = new THREE.Color(on ? '#ffd28a' : '#8f7d62');
+    gsap.to(this, { nightPower: on ? 1 : 0, duration });
+    gsap.to(this.nightBulb.material.color, { r: c.r, g: c.g, b: c.b, duration });
+    this.nightTarget.label = on ? 'Apagar luz' : 'Encender luz';
+  }
+
   buildUnderDesk() {
     // Enchufe con luz de noche
     const socket = new THREE.Group();
@@ -938,6 +950,17 @@ export class Room {
     this.nightLight = new THREE.PointLight('#ffb866', 0, 12, 2);
     this.nightLight.position.set(0.42, 0.12, 1.3);
     socket.add(this.nightLight);
+
+    // Clic en la luz de noche: se apaga y se vuelve a encender
+    this.nightOn = true;
+    this.nightPower = 1; // 0 apagada, 1 encendida
+    this.nightTarget = this.addTarget({
+      group: socket,
+      size: [1.1, 0.9, 0.6],
+      offset: [0.22, 0.05, 0.2],
+      label: 'Apagar luz',
+      onClick: () => this.toggleNightLight(),
+    });
 
     // Tapete
     const rugY = FLOOR_Y + 0.02;
@@ -1042,9 +1065,9 @@ export class Room {
     this.ambient.intensity = lerp(0.6, 0.2, night);
     this.hemi.intensity = lerp(0.35, 0.1, night);
     this.sun.intensity = lerp(1.0, 0.22, night);
-    this.nightLight.intensity = lerp(0, 13, night);
+    this.nightLight.intensity = lerp(0, 13, night) * this.nightPower;
     this.screenLight.intensity = lerp(0, 2.5, night);
-    this.nightBulb.scale.setScalar(1 + Math.sin(elapsed * 2) * 0.04);
+    this.nightBulb.scale.setScalar(1 + Math.sin(elapsed * 2) * 0.04 * this.nightPower);
 
     // Reloj
     const now = new Date();

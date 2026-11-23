@@ -8,14 +8,20 @@
     <meta name="author" content="María Antonia Chica Quintero" />
 
     <!-- Vista previa al compartir (Open Graph: WhatsApp, LinkedIn, Facebook) -->
-    <!-- Al publicar el sitio, cambia og:image y twitter:image por la URL completa, -->
-    <!-- por ejemplo https://tudominio.com/og-image.jpg, y agrega og:url. -->
-    <meta property="og:type" content="website" />
+    <!-- __SITE_URL__ se reemplaza por el dominio definido en vite.config.js: las redes -->
+    <!-- solo muestran la imagen si og:image es una URL completa. -->
+    <link rel="canonical" href="__SITE_URL__/" />
+    <meta name="robots" content="index, follow, max-image-preview:large" />
+    <meta property="og:url" content="__SITE_URL__/" />
+    <meta property="og:type" content="profile" />
+    <meta property="profile:first_name" content="María Antonia" />
+    <meta property="profile:last_name" content="Chica Quintero" />
     <meta property="og:locale" content="es_CO" />
     <meta property="og:site_name" content="María Antonia Chica" />
     <meta property="og:title" content="María Antonia Chica | Psicóloga y Generalista de RR. HH." />
     <meta property="og:description" content="Portafolio 3D de María Antonia Chica, psicóloga y generalista de Recursos Humanos: selección, nómina multipaís y automatización de procesos con IA." />
-    <meta property="og:image" content="/og-image.jpg" />
+    <meta property="og:image" content="__SITE_URL__/og-image.jpg" />
+    <meta property="og:image:secure_url" content="__SITE_URL__/og-image.jpg" />
     <meta property="og:image:type" content="image/jpeg" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
@@ -25,7 +31,144 @@
     <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="María Antonia Chica | Psicóloga y Generalista de RR. HH." />
     <meta name="twitter:description" content="Portafolio 3D de María Antonia Chica, psicóloga y generalista de Recursos Humanos: selección, nómina multipaís y automatización de procesos con IA." />
-    <meta name="twitter:image" content="/og-image.jpg" />
+    <meta name="twitter:image" content="__SITE_URL__/og-image.jpg" />
+
+    <!-- Datos estructurados (schema.org) para buscadores -->
+    <script type="application/ld+json">
+      {
+        "@context": "https://schema.org",
+        "@graph": [
+          {
+            "@type": "WebSite",
+            "@id": "__SITE_URL__/#website",
+            "url": "__SITE_URL__/",
+            "name": "María Antonia Chica | Portafolio",
+            "description": "Portafolio 3D de María Antonia Chica, psicóloga y generalista de Recursos Humanos: selección, nómina multipaís y automatización de procesos con IA.",
+            "inLanguage": "es-CO",
+            "publisher": {
+              "@id": "__SITE_URL__/#person"
+            }
+          },
+          {
+            "@type": "ProfilePage",
+            "@id": "__SITE_URL__/#profilepage",
+            "url": "__SITE_URL__/",
+            "name": "María Antonia Chica | Psicóloga y Generalista de RR. HH.",
+            "inLanguage": "es-CO",
+            "isPartOf": {
+              "@id": "__SITE_URL__/#website"
+            },
+            "about": {
+              "@id": "__SITE_URL__/#person"
+            },
+            "mainEntity": {
+              "@id": "__SITE_URL__/#person"
+            },
+            "primaryImageOfPage": {
+              "@type": "ImageObject",
+              "url": "__SITE_URL__/og-image.jpg",
+              "width": 1200,
+              "height": 630
+            }
+          },
+          {
+            "@type": "Person",
+            "@id": "__SITE_URL__/#person",
+            "name": "María Antonia Chica Quintero",
+            "givenName": "María Antonia",
+            "familyName": "Chica Quintero",
+            "url": "__SITE_URL__/",
+            "image": "__SITE_URL__/Antonia-Chica.jpg",
+            "jobTitle": "Generalista de Recursos Humanos",
+            "description": "Psicóloga y generalista de Recursos Humanos con 2 años de experiencia en selección, administración de personal y nómina para empresas con operación en Colombia, Estados Unidos y República Dominicana.",
+            "email": "mailto:maria.antoniachica24@gmail.com",
+            "telephone": "+57 301 515 7767",
+            "address": {
+              "@type": "PostalAddress",
+              "addressLocality": "Envigado",
+              "addressRegion": "Antioquia",
+              "addressCountry": "CO"
+            },
+            "sameAs": [
+              "https://www.linkedin.com/in/maria-antonia-chica-quintero-6a698a223"
+            ],
+            "worksFor": {
+              "@type": "Organization",
+              "name": "Talent Phi",
+              "parentOrganization": {
+                "@type": "Organization",
+                "name": "Grupo Corporativo Efficient"
+              }
+            },
+            "hasOccupation": {
+              "@type": "Occupation",
+              "name": "Generalista de Recursos Humanos",
+              "occupationLocation": {
+                "@type": "Country",
+                "name": "Colombia"
+              },
+              "skills": "Selección de personal, administración de personal, liquidación de nómina, seguridad social y PILA, nómina electrónica DIAN, procesos disciplinarios, onboarding y offboarding, SG-SST, automatización de procesos de RH con inteligencia artificial"
+            },
+            "alumniOf": [
+              {
+                "@type": "CollegeOrUniversity",
+                "name": "Universidad de San Buenaventura, Medellín"
+              },
+              {
+                "@type": "CollegeOrUniversity",
+                "name": "Universidad de Deusto, Bilbao"
+              }
+            ],
+            "hasCredential": [
+              {
+                "@type": "EducationalOccupationalCredential",
+                "name": "Psicología",
+                "credentialCategory": "degree",
+                "recognizedBy": {
+                  "@type": "CollegeOrUniversity",
+                  "name": "Universidad de San Buenaventura, Medellín"
+                }
+              },
+              {
+                "@type": "EducationalOccupationalCredential",
+                "name": "Diplomado en Gestión del Talento Humano con HR Analytics e Inteligencia Artificial",
+                "credentialCategory": "certificate",
+                "recognizedBy": {
+                  "@type": "Organization",
+                  "name": "UdeCataluña"
+                }
+              }
+            ],
+            "knowsLanguage": [
+              {
+                "@type": "Language",
+                "name": "Español",
+                "alternateName": "es"
+              },
+              {
+                "@type": "Language",
+                "name": "Inglés",
+                "alternateName": "en"
+              }
+            ],
+            "knowsAbout": [
+              "Recursos Humanos",
+              "Psicología organizacional",
+              "Selección de personal",
+              "Reclutamiento masivo",
+              "Administración de personal",
+              "Nómina",
+              "Nómina electrónica DIAN",
+              "Seguridad social y PILA",
+              "SG-SST",
+              "Onboarding y offboarding",
+              "HR Analytics",
+              "Automatización de procesos con inteligencia artificial"
+            ]
+          }
+        ]
+      }
+    </script>
 
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -212,6 +355,12 @@
           <li>ChatGPT</li>
           <li>Copilot</li>
         </ul>
+        <h3 class="skill-group">Idiomas</h3>
+        <ul class="skill-list">
+          <li>Inglés C1</li>
+          <li>Inglés a diario con hablantes nativos de Miami</li>
+          <li>Español nativo</li>
+        </ul>
       </div>
     </div>
 
@@ -356,8 +505,8 @@
         <div class="certification-item">
           <h4>Inglés</h4>
           <p>
-            Avanzado: uso diario en nómina, contratos, entrevistas y comunicación con el equipo de
-            EE.UU.
+Nivel C1 (avanzado). Lo hablo todos los días con hablantes nativos de Miami: uso diario
+            en nómina, contratos, entrevistas y comunicación con el equipo de EE.UU.
           </p>
         </div>
       </div>
