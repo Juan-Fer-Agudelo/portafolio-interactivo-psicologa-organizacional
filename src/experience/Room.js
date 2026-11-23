@@ -458,14 +458,32 @@ export class Room {
     const dest = this.catSpots[to];
     const start = cat.position.clone();
     const startScale = cat.scale.x;
-    const dir = Math.sign(dest.pos.x - start.x) || 1;
-    const goingUp = dest.pos.y > start.y;
-    const arc = goingUp ? 1.7 : 1.1;
-    const state = { t: 0 };
 
+    // --- Trayectoria balística: velocidad horizontal constante y gravedad real ---
+    const GRAVITY = 15;
+    const goingUp = dest.pos.y > start.y;
+    // Altura máxima del salto: un impulso corto al bajar, uno mayor al subir
+    const apex = Math.max(start.y, dest.pos.y) + (goingUp ? 0.9 : 0.55);
+    const tUp = Math.sqrt((2 * (apex - start.y)) / GRAVITY);
+    const tDown = Math.sqrt((2 * (apex - dest.pos.y)) / GRAVITY);
+    const flight = tUp + tDown;
+    const v0 = GRAVITY * tUp; // velocidad vertical de despegue
+    const dx = dest.pos.x - start.x;
+    const dz = dest.pos.z - start.z;
+    const speedH = Math.hypot(dx, dz) / flight;
+    const heading = Math.atan2(dx, dz); // hacia dónde mira mientras vuela
+    const landingSpeed = GRAVITY * tDown;
+    // Cuanto más fuerte cae, más se aplasta al aterrizar
+    const squash = THREE.MathUtils.clamp(1 - landingSpeed * 0.03, 0.68, 0.88);
+
+    const state = { time: 0 };
     this.catJumping = true;
     this.setCatPose('sit', 0.2);
     this.setCatEyes(true);
+    cat.rotation.order = 'YXZ'; // primero gira hacia el destino, luego cabecea
+
+    const body = this.catBody.scale;
+    const tail = this.catTail.rotation;
 
     gsap
       .timeline({
@@ -473,31 +491,46 @@ export class Room {
           this.catSpot = to;
           this.catJumping = false;
           this.setCatEyes(dest.eyesOpen);
-          this.setCatPose(dest.pose, 0.5);
+          this.setCatPose(dest.pose, 0.6);
         },
       })
-      // Se agacha mirando hacia donde va a saltar
-      .to(this.catBody.scale, { y: 0.8, duration: 0.2, ease: 'power2.out' }, 0.15)
-      .to(cat.rotation, { y: dir * 0.95, duration: 0.3, ease: 'power2.out' }, 0.05)
-      .to(this.catBody.scale, { y: 1.12, duration: 0.1, ease: 'power2.out' })
-      // Vuelo en parábola
+      // 1. Mira hacia donde va a saltar
+      .to(this.catHead.rotation, { y: Math.sign(dx || 1) * 0.5, duration: 0.18, ease: 'power2.out' })
+      .to(cat.rotation, { y: heading * 0.85, duration: 0.28, ease: 'power2.inOut' })
+      .to(this.catHead.rotation, { y: 0, duration: 0.2, ease: 'power2.out' }, '<')
+      // 2. Anticipación: se agacha y carga el salto
+      .to(body, { y: 0.72, x: 1.1, z: 1.1, duration: 0.22, ease: 'power2.out' })
+      .to(tail, { x: -0.5, duration: 0.22, ease: 'power2.out' }, '<')
+      // 3. Despegue: se estira de golpe
+      .to(body, { y: 1.18, x: 0.93, z: 0.93, duration: 0.07, ease: 'power3.out' })
+      // 4. Vuelo
       .to(state, {
-        t: 1,
-        duration: 0.9,
-        ease: 'sine.inOut',
+        time: flight,
+        duration: flight,
+        ease: 'none',
         onUpdate: () => {
-          const t = state.t;
-          cat.position.lerpVectors(start, dest.pos, t);
-          cat.position.y += arc * 4 * t * (1 - t);
-          cat.scale.setScalar(THREE.MathUtils.lerp(startScale, dest.scale, t));
-          // Se inclina hacia adelante al caer y hacia atrás al subir
-          cat.rotation.z = -dir * Math.sin(t * Math.PI) * (goingUp ? -0.35 : 0.6);
+          const t = state.time;
+          const k = t / flight;
+          const vy = v0 - GRAVITY * t;
+          cat.position.set(start.x + dx * k, start.y + v0 * t - 0.5 * GRAVITY * t * t, start.z + dz * k);
+          cat.scale.setScalar(THREE.MathUtils.lerp(startScale, dest.scale, k));
+          // El cuerpo sigue la dirección de la velocidad: sube de frente y cae de cabeza
+          const pitch = -Math.atan2(vy, Math.max(speedH, 0.001)) * 0.65;
+          cat.rotation.x = THREE.MathUtils.clamp(pitch, -0.9, 1.05);
+          // Estirado al subir y al caer, recogido en lo más alto
+          const stretch = 1 + Math.min(Math.abs(vy) * 0.02, 0.18);
+          body.set(2 - stretch, stretch, 2 - stretch);
+          // La cola se retrasa respecto al cuerpo
+          tail.x = THREE.MathUtils.clamp(vy * 0.08, -0.7, 0.7);
         },
       })
-      // Aterriza
-      .to(this.catBody.scale, { y: 0.84, duration: 0.09, ease: 'power2.out' })
-      .to(this.catBody.scale, { y: 1, duration: 0.2, ease: 'power2.out' })
-      .to(cat.rotation, { y: dest.rotY, z: 0, duration: 0.3, ease: 'power2.out' }, '<');
+      // 5. Aterrizaje: se aplasta, rebota y se asienta
+      .to(body, { y: squash, x: 2 - squash, z: 2 - squash, duration: 0.07, ease: 'power2.out' })
+      .to(cat.rotation, { x: 0, duration: 0.12, ease: 'power2.out' }, '<')
+      .to(body, { y: 1, x: 1, z: 1, duration: 0.55, ease: 'elastic.out(1, 0.45)' })
+      .to(tail, { x: 0, duration: 0.5, ease: 'elastic.out(1, 0.5)' }, '<')
+      // 6. Se acomoda mirando al frente
+      .to(cat.rotation, { y: dest.rotY, duration: 0.4, ease: 'power2.inOut' }, '<0.1');
   }
 
   updateCat(elapsed, scroll) {
