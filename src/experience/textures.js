@@ -1,16 +1,36 @@
 import * as THREE from 'three';
+import { onLangChange, t, usage } from '../i18n.js';
 
 // Todas las texturas se dibujan en canvas: no hay imágenes externas.
 const FONT = '"Fredoka", "Trebuchet MS", sans-serif';
+
+// Texturas que contienen texto traducible: se vuelven a dibujar al cambiar de idioma.
+const localized = [];
+onLangChange(() => localized.forEach((redraw) => redraw()));
 
 function tex(w, h, draw) {
   const canvas = document.createElement('canvas');
   canvas.width = w;
   canvas.height = h;
-  draw(canvas.getContext('2d'), w, h);
+  const ctx = canvas.getContext('2d');
+  const paint = () => {
+    ctx.save();
+    ctx.clearRect(0, 0, w, h);
+    draw(ctx, w, h);
+    ctx.restore();
+  };
+  const before = usage.count;
+  paint();
   const texture = new THREE.CanvasTexture(canvas);
   texture.colorSpace = THREE.SRGBColorSpace;
   texture.anisotropy = 8;
+  // Si al dibujarla se pidió alguna traducción, la textura depende del idioma
+  if (usage.count !== before) {
+    localized.push(() => {
+      paint();
+      texture.needsUpdate = true;
+    });
+  }
   return texture;
 }
 
@@ -281,9 +301,10 @@ export function signTexture(shadow = false, lit = true) {
     };
     // Las dos líneas grandes comparten tamaño: el de la más larga
     const big = fit('MARÍA ANTONIA', 330, 800, 6);
-    line('¡HOLA! SOY', 370, big, 800, 6);
+    line(t('¡HOLA! SOY'), 370, big, 800, 6);
     line('MARÍA ANTONIA', 370 + big * 1.12, big, 800, 6);
-    line('Psicóloga · Generalista de Recursos Humanos', 930, fit('Psicóloga · Generalista de Recursos Humanos', 92, 700, 2), 700, 2);
+    const role = t('Psicóloga · Generalista de Recursos Humanos');
+    line(role, 930, fit(role, 92, 700, 2), 700, 2);
     if (!shadow && lit) {
       // Resplandor de la lámpara: tiñe de naranja las letras más cercanas a ella
       ctx.globalCompositeOperation = 'source-atop';
@@ -372,7 +393,12 @@ export function iconTextures(kind, background, aspect) {
 
 /* ---------- Gato ---------- */
 // Textura de la cabeza (esfera): el frente de la cara queda en u = 0.25.
-export function catFaceTexture(base, patch, eyesOpen = false) {
+/**
+ * Cara del gato. `eyes` es el color del iris (sin él, ojos oscuros) y `dark`
+ * indica un pelaje oscuro, donde los trazos van en claro para que se vean.
+ */
+export function catFaceTexture({ base, patch, eyes = null, dark = false }, eyesOpen = false) {
+  const lineColor = dark ? '#eadfce' : '#2f2420';
   return tex(1024, 512, (ctx, w, h) => {
     const cx = w * 0.25;
     ctx.fillStyle = base;
@@ -397,16 +423,28 @@ export function catFaceTexture(base, patch, eyesOpen = false) {
     ctx.ellipse(cx + 118, 305, 34, 22, 0, 0, Math.PI * 2);
     ctx.fill();
     // Ojos cerrados y felices
-    ctx.strokeStyle = '#2f2420';
+    ctx.strokeStyle = lineColor;
     ctx.lineWidth = 10;
     ctx.lineCap = 'round';
     [-1, 1].forEach((side) => {
       const ex = cx + side * 80;
       if (eyesOpen) {
-        ctx.fillStyle = '#2a1f1c';
-        ctx.beginPath();
-        ctx.ellipse(ex, 270, 23, 31, 0, 0, Math.PI * 2);
-        ctx.fill();
+        if (eyes) {
+          // Iris de color con pupila
+          ctx.fillStyle = eyes;
+          ctx.beginPath();
+          ctx.ellipse(ex, 270, 26, 33, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#1c1513';
+          ctx.beginPath();
+          ctx.ellipse(ex, 271, 13, 22, 0, 0, Math.PI * 2);
+          ctx.fill();
+        } else {
+          ctx.fillStyle = '#2a1f1c';
+          ctx.beginPath();
+          ctx.ellipse(ex, 270, 23, 31, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(ex + 8, 258, 9, 0, Math.PI * 2);
@@ -433,7 +471,7 @@ export function catFaceTexture(base, patch, eyesOpen = false) {
       ctx.stroke();
     });
     // Bigotes cortos
-    ctx.strokeStyle = patch;
+    ctx.strokeStyle = dark ? '#b8ada3' : patch;
     ctx.lineWidth = 6;
     [-1, 1].forEach((side) => {
       [-16, 4, 24].forEach((dy, i) => {
@@ -447,7 +485,7 @@ export function catFaceTexture(base, patch, eyesOpen = false) {
 }
 
 /** Botón "cambiar gato": pastilla con carita y nombre. */
-export function catButtonTexture(name, base, patch) {
+export function catButtonTexture({ name, base, patch, dark = false }) {
   return tex(512, 200, (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
     ctx.fillStyle = '#8a4326';
@@ -476,7 +514,7 @@ export function catButtonTexture(name, base, patch) {
     ctx.beginPath();
     ctx.ellipse(cx - 30, cy - 26, 30, 22, -0.4, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#2f2420';
+    ctx.strokeStyle = dark ? '#eadfce' : '#2f2420';
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
     [-1, 1].forEach((side) => {
@@ -506,8 +544,8 @@ export function catLabelTexture() {
     ctx.shadowOffsetY = 4;
     ctx.fillStyle = '#ffffff';
     ctx.font = `600 92px ${FONT}`;
-    ctx.fillText('CAMBIAR', w / 2, 66);
-    ctx.fillText('GATO', w / 2, 168);
+    ctx.fillText(t('CAMBIAR'), w / 2, 66);
+    ctx.fillText(t('GATO'), w / 2, 168);
   });
 }
 
@@ -726,7 +764,7 @@ export function projectsScreenTexture(hover = false) {
     ctx.font = `700 112px ${PIXEL}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('PROYECTOS', w / 2, by + bh / 2 + 6);
+    ctx.fillText(t('PROYECTOS'), w / 2, by + bh / 2 + 6);
   });
 }
 
@@ -761,6 +799,6 @@ export function helloScreenTexture() {
     ctx.font = `700 118px ${PIXEL}`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Hola :)', w / 2, wy + 80 + (wh - 80) / 2 + 6);
+    ctx.fillText(t('Hola :)'), w / 2, wy + 80 + (wh - 80) / 2 + 6);
   });
 }

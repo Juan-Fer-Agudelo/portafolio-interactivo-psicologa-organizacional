@@ -849,3 +849,23 @@ a {
   height: 1px;
   opacity: 0;
 }
+
+/* interruptor de idioma dentro del menú */
+.lang-item {
+  margin-top: 18px;
+}
+.lang-switch {
+  display: flex;
+  gap: 4px;
+  padding: 5px;
+  border-radius: 999px;
+  border: 2px solid rgba(251, 245, 234, 0.35);
+}
+.nav-list .lang-switch button {
+  font-size: 1.05rem;
+  padding: 7px 20px;
+}
+.nav-list .lang-switch button[aria-pressed='true'] {
+  background: var(--sage);
+  color: #fff;
+}

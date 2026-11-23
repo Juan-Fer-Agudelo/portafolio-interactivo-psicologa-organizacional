@@ -1,3 +1,4 @@
+import { t } from '../i18n.js';
 import * as THREE from 'three';
 import gsap from 'gsap';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
@@ -195,7 +196,7 @@ export class Experience {
     if (target) this.room.setHover(target, true);
     this.hovered = target;
     document.body.style.cursor = target ? 'pointer' : 'default';
-    if (target) this.ui.label.textContent = target.label;
+    if (target) this.ui.label.textContent = t(target.label);
     this.ui.label.classList.toggle('visible', !!target);
   }
 

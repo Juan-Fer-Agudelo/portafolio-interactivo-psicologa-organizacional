@@ -1,5 +1,6 @@
 import { Experience } from './experience/Experience.js';
 import { Ambient } from './audio.js';
+import { getLang, setLang, t, translateDocument } from './i18n.js';
 
 const $ = (selector, root = document) => root.querySelector(selector);
 const $$ = (selector, root = document) => [...root.querySelectorAll(selector)];
@@ -44,6 +45,21 @@ $$('.close-button').forEach((button) => {
 });
 backdrop.addEventListener('click', () => closePanel());
 
+/* ---------- Idioma ---------- */
+const langButtons = $$('.lang-switch [data-lang]');
+const markLang = () => {
+  langButtons.forEach((button) => button.setAttribute('aria-pressed', String(button.dataset.lang === getLang())));
+};
+langButtons.forEach((button) => {
+  button.addEventListener('click', () => {
+    setLang(button.dataset.lang);
+    markLang();
+  });
+});
+// El HTML viene en español: si el idioma inicial es inglés, se traduce al cargar.
+if (getLang() !== 'es') translateDocument();
+markLang();
+
 /* ---------- Menú ---------- */
 const nav = $('.site-nav');
 const navToggle = $('.nav-toggle');
@@ -54,7 +70,7 @@ function setMenu(open) {
   nav.classList.toggle('open', open);
   root.classList.toggle('menu-open', open);
   navToggle.setAttribute('aria-expanded', String(open));
-  navToggle.setAttribute('aria-label', open ? 'Cerrar menú' : 'Abrir menú');
+  navToggle.setAttribute('aria-label', t(open ? 'Cerrar menú' : 'Abrir menú'));
   navToggle.innerHTML = icon(open ? 'close' : 'menu');
 }
 
@@ -124,7 +140,7 @@ const toggleMusic = () => {
 audioButton.addEventListener('click', () => {
   const playing = toggleMusic();
   audioButton.innerHTML = icon(playing ? 'sound-on' : 'sound-off');
-  audioButton.setAttribute('aria-label', playing ? 'Pausar música' : 'Activar música');
+  audioButton.setAttribute('aria-label', t(playing ? 'Pausar música' : 'Activar música'));
   audioButton.setAttribute('aria-pressed', String(playing));
 });
 
@@ -190,25 +206,26 @@ const formMessage = $('#form-message');
 form.addEventListener('submit', async (e) => {
   e.preventDefault();
   submitButton.disabled = true;
-  submitButton.textContent = 'Enviando…';
+  submitButton.textContent = t('Enviando…');
   formMessage.textContent = '';
   try {
     const result = await sendMessage(Object.fromEntries(new FormData(form)));
     if (result.needsActivation) {
       formMessage.style.color = '#9a6b12';
-      formMessage.textContent =
-        'El formulario aún no está activado. Mientras tanto, escríbeme directamente al correo.';
+      formMessage.textContent = t(
+        'El formulario aún no está activado. Mientras tanto, escríbeme directamente al correo.'
+      );
     } else {
       formMessage.style.color = '#2f7a4d';
-      formMessage.textContent = '¡Mensaje enviado! Te responderé pronto.';
+      formMessage.textContent = t('¡Mensaje enviado! Te responderé pronto.');
       form.reset();
     }
   } catch {
     formMessage.style.color = '#b3412b';
-    formMessage.textContent = 'No se pudo enviar el mensaje. Inténtalo de nuevo o escríbeme al correo.';
+    formMessage.textContent = t('No se pudo enviar el mensaje. Inténtalo de nuevo o escríbeme al correo.');
   } finally {
     submitButton.disabled = false;
-    submitButton.textContent = 'Enviar mensaje';
+    submitButton.textContent = t('Enviar mensaje');
   }
 });
 

@@ -393,13 +393,14 @@ export class Room {
     this.group.add(cat);
 
     this.catCoats = [
-      { name: 'CANELA', base: '#f7e3cf', patch: '#e2823c' },
-      { name: 'HUMO', base: '#eeeae6', patch: '#77787f' },
+      { name: 'BONNY', base: '#f7e3cf', patch: '#e2823c' },
+      { name: 'HOLLY', base: '#eeeae6', patch: '#77787f' }, // gris
+      { name: 'MOLLY', base: '#34302e', patch: '#191615', eyes: '#f5c518', dark: true }, // negra, ojos amarillos
     ];
     this.catCoats.forEach((coat) => {
-      coat.faceOpen = catFaceTexture(coat.base, coat.patch, true);
-      coat.faceClosed = catFaceTexture(coat.base, coat.patch, false);
-      coat.button = catButtonTexture(coat.name, coat.base, coat.patch);
+      coat.faceOpen = catFaceTexture(coat, true);
+      coat.faceClosed = catFaceTexture(coat, false);
+      coat.button = catButtonTexture(coat);
     });
     this.catCoat = 0;
     const coat = this.catCoats[0];
