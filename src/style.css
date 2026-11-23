@@ -802,3 +802,19 @@ a {
   font-size: 1.6rem;
   padding: 10px 28px;
 }
+
+/* listas de logros en la experiencia */
+.job-description ul {
+  margin: 8px 0 0;
+  padding-left: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+.job-description p + ul {
+  margin-top: 10px;
+}
+.social-links .location .icon {
+  width: 1.2em;
+  height: 1.2em;
+}

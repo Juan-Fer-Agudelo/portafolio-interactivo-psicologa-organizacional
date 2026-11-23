@@ -8,7 +8,8 @@ import {
   catFaceTexture,
   catButtonTexture,
   catLabelTexture,
-  screenTexture,
+  projectsScreenTexture,
+  helloScreenTexture,
   envelopeTexture,
   clockTexture,
   signTexture,
@@ -147,7 +148,7 @@ export class Room {
   buildShell() {
     const paper = wallpaperTexture();
     paper.repeat.set(34 / 4.6, 19 / 4.6);
-    const wall = new THREE.Mesh(new THREE.PlaneGeometry(34, 19), std('#ffffff', { map: paper, roughness: 0.95 }));
+    const wall = new THREE.Mesh(new THREE.PlaneGeometry(34, 19), std('#ededed', { map: paper, roughness: 0.95 }));
     wall.position.set(0, FLOOR_Y + 9.5, 0);
     wall.receiveShadow = true;
     this.group.add(wall);
@@ -320,7 +321,8 @@ export class Room {
       { name: 'HUMO', base: '#eeeae6', patch: '#77787f' },
     ];
     this.catCoats.forEach((coat) => {
-      coat.face = catFaceTexture(coat.base, coat.patch);
+      coat.faceOpen = catFaceTexture(coat.base, coat.patch, true);
+      coat.faceClosed = catFaceTexture(coat.base, coat.patch, false);
       coat.button = catButtonTexture(coat.name, coat.base, coat.patch);
     });
     this.catCoat = 0;
@@ -328,11 +330,13 @@ export class Room {
     const soft = { roughness: 0.95 };
     this.catBase = std(coat.base, soft);
     this.catPatch = std(coat.patch, soft);
-    this.catHeadMat = std('#ffffff', { map: coat.face, ...soft });
+    this.catHeadMat = std('#ffffff', { map: coat.faceOpen, ...soft });
     const pink = std('#f0a3a0', soft);
 
     this.catBody = new THREE.Group();
     cat.add(this.catBody);
+    this.catFeet = new THREE.Group();
+    cat.add(this.catFeet);
 
     // Cuerpo
     const body = sphere(this.catBody, 0.33, this.catBase, 0, 0.4, 0);
@@ -345,20 +349,20 @@ export class Room {
       const leg = shadow(new THREE.Mesh(new THREE.CapsuleGeometry(0.085, 0.36, 6, 14), this.catBase));
       leg.position.set(px, 0.3, 0.22);
       this.catBody.add(leg);
-      sphere(cat, 0.1, this.catBase, px, 0.075, 0.27).scale.set(1, 0.72, 1.25);
+      sphere(this.catFeet, 0.1, this.catBase, px, 0.075, 0.27).scale.set(1, 0.72, 1.25);
     });
 
     // Patas traseras con almohadillas
     [-1, 1].forEach((side) => {
-      const foot = sphere(cat, 0.12, this.catBase, side * 0.31, 0.11, 0.2);
+      const foot = sphere(this.catFeet, 0.12, this.catBase, side * 0.31, 0.11, 0.2);
       foot.scale.set(0.95, 0.9, 1.15);
       const pad = new THREE.Mesh(new THREE.CircleGeometry(0.048, 18), pink);
       pad.position.set(side * 0.31, 0.095, 0.342);
-      cat.add(pad);
+      this.catFeet.add(pad);
       [-1, 0, 1].forEach((k) => {
         const toe = new THREE.Mesh(new THREE.CircleGeometry(0.02, 12), pink);
         toe.position.set(side * 0.31 + k * 0.045, 0.165 - Math.abs(k) * 0.012, 0.336);
-        cat.add(toe);
+        this.catFeet.add(toe);
       });
     });
 
@@ -394,6 +398,17 @@ export class Room {
     this.catTail.add(shadow(new THREE.Mesh(new THREE.TubeGeometry(curve, 20, 0.065, 10), this.catPatch)));
     sphere(this.catTail, 0.066, this.catPatch, 0.4, 0.14, 0.46);
 
+    // Lugares del gato según la parada del scroll
+    this.cat = cat;
+    this.catSpots = [
+      { pos: new THREE.Vector3(x, y, z), scale, rotY: 0.12, pose: 'sit', eyesOpen: true },
+      { pos: new THREE.Vector3(2.2, DESK_TOP_Y, 2.55), scale: 1.5, rotY: -0.12, pose: 'sit', eyesOpen: false },
+      { pos: new THREE.Vector3(-2.6, FLOOR_Y + 0.4, 1.6), scale: 1.3, rotY: 0.1, pose: 'sleep', eyesOpen: false },
+    ];
+    this.catSpot = 0;
+    this.catJumping = false;
+    this.catEyesOpen = true;
+
     this.addTarget({
       group: cat,
       size: [0.95, 1.6, 0.9],
@@ -401,6 +416,7 @@ export class Room {
       label: '¡Miau!',
       onClick: () => this.toggleCat(),
       onHover: (active) => {
+        if (this.catJumping || this.catSpots[this.catSpot].pose !== 'sit') return;
         gsap.to(this.catHead.rotation, { z: active ? 0.22 : 0, duration: 0.3, ease: 'power2.out' });
       },
     });
@@ -411,9 +427,87 @@ export class Room {
     const coat = this.catCoats[this.catCoat];
     this.catBase.color.set(coat.base);
     this.catPatch.color.set(coat.patch);
-    this.catHeadMat.map = coat.face;
+    this.catHeadMat.map = this.catEyesOpen ? coat.faceOpen : coat.faceClosed;
     if (this.catButtonMat) this.catButtonMat.map = coat.button;
-    gsap.fromTo(this.catBody.position, { y: 0 }, { y: 0.22, duration: 0.18, yoyo: true, repeat: 1, ease: 'power2.out' });
+    if (!this.catJumping && this.catSpots[this.catSpot].pose === 'sit') {
+      gsap.fromTo(this.catBody.position, { y: 0 }, { y: 0.22, duration: 0.18, yoyo: true, repeat: 1, ease: 'power2.out' });
+    }
+  }
+
+  setCatEyes(open) {
+    this.catEyesOpen = open;
+    const coat = this.catCoats[this.catCoat];
+    this.catHeadMat.map = open ? coat.faceOpen : coat.faceClosed;
+  }
+
+  /** Postura: sentado, o dormido de lado en la cama. */
+  setCatPose(pose, duration = 0.35) {
+    const sleep = pose === 'sleep';
+    const ease = 'power2.inOut';
+    gsap.to(this.catBody.rotation, { z: sleep ? -1.25 : 0, duration, ease });
+    gsap.to(this.catBody.position, { x: sleep ? -0.5 : 0, y: sleep ? 0.3 : 0, duration, ease });
+    gsap.to(this.catHead.rotation, { z: sleep ? 0.6 : 0, duration, ease });
+    const feet = sleep ? 0.001 : 1;
+    gsap.to(this.catFeet.scale, { x: feet, y: feet, z: feet, duration, ease });
+    gsap.to(this.catTail.position, { y: sleep ? 0.3 : 0.14, duration, ease });
+  }
+
+  /** Salta de su lugar actual al lugar indicado (0 repisa, 1 escritorio, 2 cama). */
+  jumpCat(to) {
+    const cat = this.cat;
+    const dest = this.catSpots[to];
+    const start = cat.position.clone();
+    const startScale = cat.scale.x;
+    const dir = Math.sign(dest.pos.x - start.x) || 1;
+    const goingUp = dest.pos.y > start.y;
+    const arc = goingUp ? 1.7 : 1.1;
+    const state = { t: 0 };
+
+    this.catJumping = true;
+    this.setCatPose('sit', 0.2);
+    this.setCatEyes(true);
+
+    gsap
+      .timeline({
+        onComplete: () => {
+          this.catSpot = to;
+          this.catJumping = false;
+          this.setCatEyes(dest.eyesOpen);
+          this.setCatPose(dest.pose, 0.5);
+        },
+      })
+      // Se agacha mirando hacia donde va a saltar
+      .to(this.catBody.scale, { y: 0.8, duration: 0.2, ease: 'power2.out' }, 0.15)
+      .to(cat.rotation, { y: dir * 0.95, duration: 0.3, ease: 'power2.out' }, 0.05)
+      .to(this.catBody.scale, { y: 1.12, duration: 0.1, ease: 'power2.out' })
+      // Vuelo en parábola
+      .to(state, {
+        t: 1,
+        duration: 0.9,
+        ease: 'sine.inOut',
+        onUpdate: () => {
+          const t = state.t;
+          cat.position.lerpVectors(start, dest.pos, t);
+          cat.position.y += arc * 4 * t * (1 - t);
+          cat.scale.setScalar(THREE.MathUtils.lerp(startScale, dest.scale, t));
+          // Se inclina hacia adelante al caer y hacia atrás al subir
+          cat.rotation.z = -dir * Math.sin(t * Math.PI) * (goingUp ? -0.35 : 0.6);
+        },
+      })
+      // Aterriza
+      .to(this.catBody.scale, { y: 0.84, duration: 0.09, ease: 'power2.out' })
+      .to(this.catBody.scale, { y: 1, duration: 0.2, ease: 'power2.out' })
+      .to(cat.rotation, { y: dest.rotY, z: 0, duration: 0.3, ease: 'power2.out' }, '<');
+  }
+
+  updateCat(elapsed, scroll) {
+    const want = scroll < 0.3 ? 0 : scroll < 0.8 ? 1 : 2;
+    if (!this.catJumping && want !== this.catSpot) this.jumpCat(want);
+    this.catTail.rotation.y = Math.sin(elapsed * 1.6) * 0.35;
+    if (!this.catJumping) {
+      const asleep = this.catSpots[this.catSpot].pose === 'sleep';
+      this.catBody.scale.y = 1 + Math.sin(elapsed * (asleep ? 1.1 : 1.8)) * (asleep ? 0.03 : 0.012);
+    }
   }
 
   /* ---------- Parada 1: cuadros con ícono y botón del gato ---------- */
@@ -478,7 +572,7 @@ export class Room {
     });
   }
 
-  /* ---------- Parada 2: escritorio ---------- */
+  /* ---------- Parada 2: escritorio con dos monitores ---------- */
   buildDesk() {
     // Estructura
     box(this.group, 9.9, 0.26, 3.3, std(C.woodLight), 0, DESK_TOP_Y - 0.13, 1.65);
@@ -488,68 +582,113 @@ export class Room {
       box(this.group, 0.26, legH, 0.26, legMat, x, FLOOR_Y + legH / 2, z);
     });
 
-    // Objetos del escritorio: se construyen a escala pequeña y se amplían x2
-    const S = 2;
-    const desk = new THREE.Group();
-    desk.position.set(0.3, DESK_TOP_Y, 1.65);
-    desk.scale.setScalar(S);
-    this.group.add(desk);
+    // --- Monitores gruesos y redondeados ---
+    const shell = std('#5a3b2d', { roughness: 0.6 });
+    const makeMonitor = (x, rotY, texture) => {
+      const g = new THREE.Group();
+      g.position.set(x, DESK_TOP_Y, 0.95);
+      g.rotation.y = rotY;
+      this.group.add(g);
+      cyl(g, 0.5, 0.62, 0.1, shell, 0, 0.05, 0.05, 32).scale.z = 0.6;
+      cyl(g, 0.11, 0.14, 0.5, shell, 0, 0.3, 0, 16);
+      const body = shadow(new THREE.Mesh(new RoundedBoxGeometry(2.86, 2.34, 0.5, 6, 0.24), shell));
+      body.position.y = 1.72;
+      g.add(body);
+      const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true, toneMapped: false });
+      const screen = new THREE.Mesh(new THREE.PlaneGeometry(2.5, 1.98), material);
+      screen.position.set(0, 1.72, 0.256);
+      g.add(screen);
+      return { group: g, material };
+    };
 
-    // --- Monitor (Proyectos) ---
-    const monitor = new THREE.Group();
-    monitor.position.set(0, 0, -0.4);
-    desk.add(monitor);
-    const dark = std(C.dark, { roughness: 0.5 });
-    cyl(monitor, 0.34, 0.38, 0.05, dark, 0, 0.025, 0);
-    box(monitor, 0.1, 0.5, 0.07, dark, 0, 0.28, 0);
-    box(monitor, 2.1, 1.22, 0.08, dark, 0, 1.02, 0);
-    this.screenTextures = { idle: screenTexture(false), hover: screenTexture(true) };
-    this.screenMaterial = new THREE.MeshBasicMaterial({ map: this.screenTextures.idle, toneMapped: false });
-    const screen = new THREE.Mesh(new THREE.PlaneGeometry(1.96, 1.08), this.screenMaterial);
-    screen.position.set(0, 1.02, 0.042);
-    monitor.add(screen);
-    this.screenLight = new THREE.PointLight('#ffd9a8', 0, 5, 2);
-    this.screenLight.position.set(0, 0.9, 0.7);
-    monitor.add(this.screenLight);
+    this.screenTextures = { idle: projectsScreenTexture(false), hover: projectsScreenTexture(true) };
+    const left = makeMonitor(-0.3, 0.14, this.screenTextures.idle);
+    this.screenMaterial = left.material;
+    makeMonitor(2.62, -0.14, helloScreenTexture());
+
+    this.screenLight = new THREE.PointLight('#ffd9a8', 0, 7, 2);
+    this.screenLight.position.set(1.2, DESK_TOP_Y + 1.6, 2.6);
+    this.group.add(this.screenLight);
+
     this.addTarget({
-      group: monitor,
-      size: [2.1, 1.26, 0.3],
-      offset: [0, 1.02, 0.05],
+      group: left.group,
+      size: [2.86, 2.34, 0.6],
+      offset: [0, 1.72, 0.05],
       label: 'Proyectos',
       panel: 'projects-panel',
       onHover: (active) => {
         this.screenMaterial.map = active ? this.screenTextures.hover : this.screenTextures.idle;
         const s = active ? 1.03 : 1;
-        gsap.to(monitor.scale, { x: s, y: s, z: s, duration: 0.4, ease: 'power2.out' });
+        gsap.to(left.group.scale, { x: s, y: s, z: s, duration: 0.4, ease: 'power2.out' });
       },
     });
 
-    // Teclado y ratón
-    box(desk, 1.05, 0.04, 0.34, std('#e9e3d8'), 0, 0.02, 0.38);
-    box(desk, 0.95, 0.012, 0.26, std('#cfc7b9'), 0, 0.046, 0.38).castShadow = false;
-    const mouse = sphere(desk, 0.09, std('#e9e3d8'), 0.8, 0.03, 0.4);
-    mouse.scale.set(0.8, 0.45, 1.2);
+    // --- Objetos pequeños: se construyen a media escala y se amplían x2 ---
+    const desk = new THREE.Group();
+    desk.position.set(0, DESK_TOP_Y, 1.65);
+    desk.scale.setScalar(2);
+    this.group.add(desk);
 
-    // Libros apilados y portalápices
-    box(desk, 0.78, 0.09, 0.56, std(C.plum), -1.95, 0.045, 0.25);
-    box(desk, 0.72, 0.08, 0.52, std(C.terracotta), -1.92, 0.13, 0.27).rotation.y = 0.12;
-    box(desk, 0.66, 0.07, 0.48, std(C.sage), -1.96, 0.205, 0.25).rotation.y = -0.08;
-    cyl(desk, 0.11, 0.1, 0.24, std(C.mustard), -1.3, 0.12, 0.05);
-    [['#cf6a32', 0.12, -0.03], ['#7a3420', -0.1, 0.03], ['#fbf5ea', 0.02, 0.1]].forEach(([c, rz, dx]) => {
-      const p = cyl(desk, 0.014, 0.014, 0.34, std(c), -1.3 + dx, 0.33, 0.05, 8);
+    // Teclado oscuro, alfombrilla y ratón
+    const keyDark = std('#2b211d', { roughness: 0.7 });
+    box(desk, 1.5, 0.04, 0.44, keyDark, 1.05, 0.02, 0.42);
+    const keyMat = std('#3d302a', { roughness: 0.8 });
+    for (let row = 0; row < 4; row++) {
+      for (let col = 0; col < 15; col++) {
+        const key = box(desk, 0.075, 0.016, 0.075, keyMat, 0.385 + col * 0.095, 0.048, 0.27 + row * 0.1);
+        key.castShadow = false;
+      }
+    }
+    box(desk, 0.62, 0.014, 0.46, std('#5f7a3a', { roughness: 1 }), 2.08, 0.007, 0.44);
+    const mouse = sphere(desk, 0.09, std('#cfc7b9'), 2.08, 0.04, 0.44);
+    mouse.scale.set(0.75, 0.45, 1.15);
+
+    // Planta de hojas largas detrás del monitor
+    const plant = new THREE.Group();
+    plant.position.set(-1.28, 0, -0.42);
+    desk.add(plant);
+    cyl(plant, 0.26, 0.19, 0.4, std('#b9703f'), 0, 0.2, 0);
+    const greens = [std(C.green), std(C.greenDark), std('#96a04a')];
+    [
+      [-1.0, 0.9],
+      [-0.55, 1.1],
+      [-0.15, 1.25],
+      [0.3, 1.15],
+      [0.75, 0.95],
+      [1.15, 0.7],
+      [-1.35, 0.6],
+    ].forEach(([lean, len], i) => {
+      const pivot = new THREE.Group();
+      pivot.position.y = 0.38;
+      pivot.rotation.z = -lean * 0.62;
+      pivot.rotation.y = i * 0.9;
+      const leaf = shadow(new THREE.Mesh(new THREE.SphereGeometry(0.5, 14, 10), greens[i % 3]));
+      leaf.scale.set(0.24, len, 0.05);
+      leaf.position.y = len * 0.5;
+      pivot.add(leaf);
+      plant.add(pivot);
+    });
+
+    // Portalápices y libreta
+    cyl(desk, 0.13, 0.1, 0.2, std('#c98a45'), -1.72, 0.1, 0.18);
+    [['#8fb3a8', 0.14, -0.04], ['#d9772f', -0.1, 0.03], ['#b9675a', 0.04, 0.08]].forEach(([c, rz, dx]) => {
+      const p = cyl(desk, 0.018, 0.018, 0.3, std(c), -1.72 + dx, 0.28, 0.18, 8);
       p.rotation.z = rz;
     });
-    this.buildPlant(desk, -1.75, 0, -0.42, 0.55);
+    const notebook = box(desk, 0.56, 0.04, 0.4, std('#8c3b5a'), -1.36, 0.02, 0.5);
+    notebook.rotation.y = 0.18;
+    const pencil = cyl(desk, 0.014, 0.014, 0.42, std('#d9772f'), -1.36, 0.052, 0.47, 8);
+    pencil.rotation.set(0, 0.5, Math.PI / 2);
+    cyl(desk, 0.12, 0.09, 0.1, std('#5f6b2a'), -1.5, 0.05, 0.02);
 
-    // Taza con vapor
-    const mugX = 1.45;
-    const mugZ = 0.2;
-    cyl(desk, 0.11, 0.095, 0.2, std(C.terracotta, { roughness: 0.5 }), mugX, 0.1, mugZ);
-    cyl(desk, 0.092, 0.092, 0.01, std('#4a2f22', { roughness: 0.3 }), mugX, 0.196, mugZ).castShadow = false;
-    const handle = shadow(
-      new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.018, 8, 16, Math.PI), std(C.terracotta, { roughness: 0.5 }))
-    );
-    handle.position.set(mugX + 0.1, 0.1, mugZ);
+    // Taza oscura con vapor
+    const mugX = -0.98;
+    const mugZ = 0.5;
+    const mugMat = std('#3a211c', { roughness: 0.5 });
+    cyl(desk, 0.115, 0.1, 0.22, mugMat, mugX, 0.11, mugZ);
+    cyl(desk, 0.095, 0.095, 0.01, std('#1c0f0c', { roughness: 0.3 }), mugX, 0.216, mugZ).castShadow = false;
+    const handle = shadow(new THREE.Mesh(new THREE.TorusGeometry(0.065, 0.02, 8, 16, Math.PI), mugMat));
+    handle.position.set(mugX + 0.105, 0.11, mugZ);
     handle.rotation.z = -Math.PI / 2;
     desk.add(handle);
 
@@ -557,18 +696,11 @@ export class Room {
     const puff = puffTexture();
     for (let i = 0; i < 4; i++) {
       const sprite = new THREE.Sprite(
-        new THREE.SpriteMaterial({ map: puff, transparent: true, opacity: 0, depthWrite: false })
+        new THREE.SpriteMaterial({ map: puff, color: '#ffd9cf', transparent: true, opacity: 0, depthWrite: false })
       );
       desk.add(sprite);
-      this.steam.push({ sprite, phase: i / 4, base: new THREE.Vector3(mugX, 0.24, mugZ) });
+      this.steam.push({ sprite, phase: i / 4, base: new THREE.Vector3(mugX, 0.26, mugZ) });
     }
-
-    // Libreta
-    const notebook = box(desk, 0.5, 0.035, 0.66, std(C.sage), 2.05, 0.018, 0.3);
-    notebook.rotation.y = -0.22;
-    const page = box(desk, 0.44, 0.012, 0.6, std(C.cream), 2.05, 0.04, 0.3);
-    page.rotation.y = -0.22;
-    page.castShadow = false;
   }
 
   /* ---------- Parada 3: debajo del escritorio ---------- */
@@ -599,14 +731,14 @@ export class Room {
 
     // Cama del gato
     const bed = new THREE.Group();
-    bed.position.set(-3.1, FLOOR_Y, 1.5);
+    bed.position.set(-2.5, FLOOR_Y, 1.5);
     this.group.add(bed);
     cyl(bed, 1.25, 1.3, 0.6, std('#7a3420', { roughness: 1 }), 0, 0.3, 0, 36);
     cyl(bed, 1.0, 1.0, 0.12, std(C.terracotta, { roughness: 1 }), 0, 0.58, 0, 36);
 
     // --- Sobre en el piso (Contacto) ---
     const mail = new THREE.Group();
-    mail.position.set(-2.1, FLOOR_Y + 0.03, 3.7);
+    mail.position.set(0.4, FLOOR_Y + 0.03, 4.1);
     mail.rotation.y = 0.2;
     this.group.add(mail);
     const sheet = box(mail, 1.5, 0.02, 1.05, std(C.cream), -0.25, 0.01, -0.12);
@@ -716,8 +848,7 @@ export class Room {
     });
 
     // Gato
-    this.catTail.rotation.y = Math.sin(elapsed * 1.6) * 0.35;
-    this.catBody.scale.y = 1 + Math.sin(elapsed * 1.8) * 0.012;
+    this.updateCat(elapsed, scroll);
 
     // Luces
     this.bulbs.forEach((bulb, i) => {

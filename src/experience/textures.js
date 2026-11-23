@@ -257,23 +257,26 @@ export function signTexture() {
     ctx.clearRect(0, 0, w, h);
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    ctx.lineJoin = 'round';
     ctx.shadowColor = 'rgba(60, 28, 14, 0.75)';
     ctx.shadowBlur = 22;
     ctx.shadowOffsetY = 6;
-    ctx.fillStyle = '#ffffff';
-    ctx.font = `600 196px ${FONT}`;
-    ctx.strokeStyle = 'rgba(74, 34, 16, 0.6)';
-    ctx.lineWidth = 12;
-    ctx.lineJoin = 'round';
-    ctx.strokeText('¡HOLA! SOY', w / 2, 130);
-    ctx.strokeText('TU NOMBRE', w / 2, 340);
-    ctx.fillText('¡HOLA! SOY', w / 2, 130);
-    ctx.fillText('TU NOMBRE', w / 2, 340);
-    ctx.font = `600 66px ${FONT}`;
-    ctx.lineWidth = 8;
-    ctx.strokeText('Psicóloga Organizacional', w / 2, 520);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillText('Psicóloga Organizacional', w / 2, 520);
+    // Escribe una línea reduciendo la letra hasta que quepa en el ancho
+    const line = (text, y, size, weight, stroke) => {
+      let px = size;
+      do {
+        ctx.font = `${weight} ${px}px ${FONT}`;
+        px -= 4;
+      } while (ctx.measureText(text).width > w - 70 && px > 20);
+      ctx.strokeStyle = 'rgba(74, 34, 16, 0.6)';
+      ctx.lineWidth = stroke;
+      ctx.strokeText(text, w / 2, y);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillText(text, w / 2, y);
+    };
+    line('¡HOLA! SOY', 125, 190, 600, 12);
+    line('MARÍA ANTONIA', 335, 190, 600, 12);
+    line('Psicóloga · Generalista de Recursos Humanos', 525, 66, 600, 8);
   });
 }
 
@@ -350,7 +353,7 @@ export function iconTextures(kind, background, aspect) {
 
 /* ---------- Gato ---------- */
 // Textura de la cabeza (esfera): el frente de la cara queda en u = 0.25.
-export function catFaceTexture(base, patch) {
+export function catFaceTexture(base, patch, eyesOpen = false) {
   return tex(1024, 512, (ctx, w, h) => {
     const cx = w * 0.25;
     ctx.fillStyle = base;
@@ -379,9 +382,22 @@ export function catFaceTexture(base, patch) {
     ctx.lineWidth = 10;
     ctx.lineCap = 'round';
     [-1, 1].forEach((side) => {
-      ctx.beginPath();
-      ctx.arc(cx + side * 80, 272, 30, Math.PI * 1.13, Math.PI * 1.87);
-      ctx.stroke();
+      const ex = cx + side * 80;
+      if (eyesOpen) {
+        ctx.fillStyle = '#2a1f1c';
+        ctx.beginPath();
+        ctx.ellipse(ex, 270, 23, 31, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(ex + 8, 258, 9, 0, Math.PI * 2);
+        ctx.arc(ex - 7, 283, 4, 0, Math.PI * 2);
+        ctx.fill();
+      } else {
+        ctx.beginPath();
+        ctx.arc(ex, 272, 30, Math.PI * 1.13, Math.PI * 1.87);
+        ctx.stroke();
+      }
     });
     // Nariz y boca
     ctx.fillStyle = '#e8898a';
@@ -648,5 +664,84 @@ export function puffTexture() {
     g.addColorStop(1, 'rgba(255,255,255,0)');
     ctx.fillStyle = g;
     ctx.fillRect(0, 0, w, w);
+  });
+}
+
+/* ---------- Pantallas del escritorio ---------- */
+const PIXEL = '"Courier New", monospace';
+
+function screenBase(ctx, w, h) {
+  ctx.clearRect(0, 0, w, h);
+  ctx.fillStyle = '#ffcf8f';
+  rounded(ctx, 0, 0, w, h, 70);
+  ctx.fill();
+  // Barra inferior
+  ctx.strokeStyle = '#5a2e1e';
+  ctx.lineWidth = 5;
+  ctx.beginPath();
+  ctx.moveTo(0, h - 96);
+  ctx.lineTo(w, h - 96);
+  ctx.stroke();
+  ctx.fillStyle = '#f6a583';
+  ctx.fillRect(26, h - 74, 44, 40);
+  ctx.strokeRect(26, h - 74, 44, 40);
+}
+
+export function projectsScreenTexture(hover = false) {
+  return tex(1024, 812, (ctx, w, h) => {
+    screenBase(ctx, w, h);
+    const bw = 700;
+    const bh = 250;
+    const bx = (w - bw) / 2;
+    const by = 190;
+    ctx.fillStyle = '#5a2e1e';
+    rounded(ctx, bx + 12, by + 14, bw, bh, 22);
+    ctx.fill();
+    ctx.fillStyle = hover ? '#ffb27a' : '#f08a5c';
+    rounded(ctx, bx, by, bw, bh, 22);
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#5a2e1e';
+    ctx.stroke();
+    ctx.fillStyle = '#4a2416';
+    ctx.font = `700 112px ${PIXEL}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('PROYECTOS', w / 2, by + bh / 2 + 6);
+  });
+}
+
+export function helloScreenTexture() {
+  return tex(1024, 812, (ctx, w, h) => {
+    screenBase(ctx, w, h);
+    const ww = 640;
+    const wh = 400;
+    const wx = (w - ww) / 2;
+    const wy = 130;
+    ctx.fillStyle = '#ffbd80';
+    rounded(ctx, wx, wy, ww, wh, 16);
+    ctx.fill();
+    ctx.lineWidth = 6;
+    ctx.strokeStyle = '#5a2e1e';
+    ctx.stroke();
+    ctx.fillStyle = '#f6a583';
+    ctx.fillRect(wx + 3, wy + 3, ww - 6, 76);
+    ctx.beginPath();
+    ctx.moveTo(wx, wy + 80);
+    ctx.lineTo(wx + ww, wy + 80);
+    ctx.stroke();
+    // Cerrar
+    ctx.lineWidth = 7;
+    ctx.beginPath();
+    ctx.moveTo(wx + ww - 62, wy + 24);
+    ctx.lineTo(wx + ww - 30, wy + 56);
+    ctx.moveTo(wx + ww - 30, wy + 24);
+    ctx.lineTo(wx + ww - 62, wy + 56);
+    ctx.stroke();
+    ctx.fillStyle = '#4a2416';
+    ctx.font = `700 118px ${PIXEL}`;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('Hola :)', w / 2, wy + 80 + (wh - 80) / 2 + 6);
   });
 }
