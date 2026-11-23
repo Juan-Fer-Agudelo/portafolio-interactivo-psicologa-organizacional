@@ -7,14 +7,13 @@ import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
 import { Room } from './Room.js';
 
 const CONFIG = {
-  background: '#1d1b26',
+  background: '#241812',
   fov: 35,
-  cameraY: 3.45, // altura inicial de la cámara
-  cameraZ: 10,
-  scrollFactor: 0.9, // cuánto baja la cámara por cada alto de pantalla
-  minHalfWidth: 5.3, // ancho mínimo de pared visible a cada lado
-  maxZ: 26,
-  parallax: 0.18,
+  cameraY: 0, // altura inicial de la cámara
+  cameraZ: 9,
+  scrollFactor: 6, // cuánto baja la cámara por cada alto de pantalla
+  minHalfWidth: 4.4, // ancho mínimo de pared visible a cada lado
+  maxZ: 20,
   fly: { duration: 0.9, maxDuration: 1.7, fill: 0.5, minDistance: 2.4 },
 };
 
@@ -74,15 +73,18 @@ export class Experience {
   restZ() {
     const aspect = this.sizes.width / this.sizes.height;
     const tan = Math.tan(THREE.MathUtils.degToRad(CONFIG.fov / 2));
-    // En pantallas verticales basta con ver los cuadros y el escritorio
-    const halfWidth = aspect < 1 ? 3.5 : CONFIG.minHalfWidth;
-    return THREE.MathUtils.clamp(halfWidth / (tan * aspect), CONFIG.cameraZ, CONFIG.maxZ);
+    return THREE.MathUtils.clamp(CONFIG.minHalfWidth / (tan * aspect), CONFIG.cameraZ, CONFIG.maxZ);
   }
 
   restPosition() {
     const progress = (window.scrollY / this.sizes.height) * CONFIG.scrollFactor;
-    const x = this.sizes.width < this.sizes.height ? 0.6 : 0;
-    return new THREE.Vector3(x, CONFIG.cameraY - progress, this.restZ());
+    return new THREE.Vector3(0, CONFIG.cameraY - progress, this.restZ());
+  }
+
+  /** Avance del scroll entre 0 (arriba) y 1 (abajo). */
+  scrollProgress() {
+    const max = document.documentElement.scrollHeight - this.sizes.height;
+    return max > 0 ? THREE.MathUtils.clamp(window.scrollY / max, 0, 1) : 0;
   }
 
   flyTo(target, done) {
@@ -95,6 +97,7 @@ export class Experience {
     const fitW = size.x / (2 * tan * this.camera.aspect * CONFIG.fly.fill);
     const distance = Math.max(fitH, fitW, CONFIG.fly.minDistance);
     const dest = new THREE.Vector3(center.x, center.y, Math.min(rest.z, boxObj.max.z + distance));
+    if (target.flyOffset) dest.add(new THREE.Vector3(...target.flyOffset));
 
     const duration = Math.min(
       CONFIG.fly.duration + this.camera.position.distanceTo(dest) * 0.08,
@@ -210,20 +213,13 @@ export class Experience {
 
   /* ---------- Bucle ---------- */
   update() {
-    const delta = Math.min(this.clock.getDelta(), 0.05);
+    this.clock.getDelta();
     const elapsed = this.clock.elapsedTime;
 
-    // La cámara sigue el scroll con suavidad y un leve paralaje del ratón
-    if (!this.flying && !this.flownAway) {
-      const rest = this.restPosition();
-      const k = 1 - Math.exp(-delta * 9);
-      const px = Math.abs(this.mouse.x) <= 1 ? this.mouse.x * CONFIG.parallax : 0;
-      this.camera.position.x += (rest.x + px - this.camera.position.x) * k;
-      this.camera.position.y += (rest.y - this.camera.position.y) * k;
-      this.camera.position.z += (rest.z - this.camera.position.z) * k;
-    }
+    // La cámara baja directamente con el scroll
+    if (!this.flying && !this.flownAway) this.camera.position.copy(this.restPosition());
 
-    this.room.update(elapsed);
+    this.room.update(elapsed, this.scrollProgress());
 
     const blocked = this.ui.isPanelOpen() || this.flying || this.flownAway;
     this.setHovered(blocked ? null : this.pick());
