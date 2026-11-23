@@ -168,12 +168,47 @@ export class Room {
   }
 
   buildSign() {
-    const sign = new THREE.Mesh(
-      new THREE.PlaneGeometry(2.9, 1.547),
-      new THREE.MeshBasicMaterial({ map: signTexture(), transparent: true, toneMapped: false })
-    );
-    sign.position.set(-1.0, 1.88, 0.03);
+    const sign = new THREE.Group();
+    sign.position.set(-1.0, 1.88, 0);
     this.group.add(sign);
+    const geometry = new THREE.PlaneGeometry(2.9, 1.547);
+    const letters = signTexture();
+
+    // Sombra suave sobre el papel tapiz
+    const cast = new THREE.Mesh(
+      geometry,
+      new THREE.MeshBasicMaterial({ map: signTexture(true), transparent: true, opacity: 0.8, depthWrite: false })
+    );
+    cast.position.set(0.02, -0.035, 0.012);
+    sign.add(cast);
+
+    // Letras con relieve: capas apiladas, el canto más oscuro y la cara blanca.
+    // Usan material con luz para que la lámpara las tiña de cálido desde abajo.
+    const LAYERS = 8;
+    for (let i = 0; i < LAYERS; i++) {
+      const front = i === LAYERS - 1;
+      const layer = new THREE.Mesh(
+        geometry,
+        new THREE.MeshStandardMaterial({
+          map: letters,
+          color: front ? '#cfc7be' : '#a98a70',
+          emissive: '#ffffff',
+          emissiveMap: letters,
+          emissiveIntensity: front ? 0.22 : 0,
+          roughness: 0.55,
+          alphaTest: front ? 0 : 0.5,
+          transparent: front,
+        })
+      );
+      layer.position.z = 0.02 + i * 0.008;
+      sign.add(layer);
+    }
+
+    // La lámpara baña las letras y el papel tapiz desde abajo
+    const glow = new THREE.PointLight('#ff8a2a', 2, 3.2, 1.8);
+    glow.position.set(-0.05, -1.25, 0.4);
+    sign.add(glow);
+    this.signGlow = glow;
   }
 
   /* ---------- Parada 1: repisa con planta, gato, lámpara y reloj ---------- */

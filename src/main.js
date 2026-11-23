@@ -105,8 +105,24 @@ document.addEventListener('keydown', (e) => {
 /* ---------- Música ---------- */
 const ambient = new Ambient();
 const audioButton = $('#audio-button');
+// Si existe public/musica.mp3 se usa esa canción; si no, la música generada.
+let track = null;
+fetch('/musica.mp3', { method: 'HEAD' })
+  .then((res) => {
+    if (!res.ok || !(res.headers.get('content-type') || '').startsWith('audio')) return;
+    track = new Audio('/musica.mp3');
+    track.loop = true;
+    track.volume = 0.5;
+  })
+  .catch(() => {});
+const toggleMusic = () => {
+  if (!track) return ambient.toggle();
+  if (track.paused) track.play();
+  else track.pause();
+  return !track.paused;
+};
 audioButton.addEventListener('click', () => {
-  const playing = ambient.toggle();
+  const playing = toggleMusic();
   audioButton.innerHTML = icon(playing ? 'sound-on' : 'sound-off');
   audioButton.setAttribute('aria-label', playing ? 'Pausar música' : 'Activar música');
   audioButton.setAttribute('aria-pressed', String(playing));
@@ -231,7 +247,11 @@ async function boot() {
   // Las texturas se dibujan con la fuente del sitio: hay que esperarla.
   try {
     await Promise.race([
-      Promise.all([document.fonts.load('600 40px "Fredoka"'), document.fonts.load('500 40px "Fredoka"')]),
+      Promise.all([
+        document.fonts.load('600 40px "Fredoka"'),
+        document.fonts.load('500 40px "Fredoka"'),
+        document.fonts.load('800 40px "League Spartan"'),
+      ]),
       new Promise((resolve) => setTimeout(resolve, 2500)),
     ]);
   } catch {

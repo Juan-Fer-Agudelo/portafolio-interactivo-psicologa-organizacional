@@ -241,42 +241,61 @@ export function clockTexture() {
     ctx.arc(c, c, c, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#3a2618';
-    for (let i = 0; i < 12; i++) {
-      ctx.save();
-      ctx.translate(c, c);
-      ctx.rotate((i / 12) * Math.PI * 2);
-      const big = i % 3 === 0;
-      ctx.fillRect(big ? -7 : -3.5, -c + 34, big ? 14 : 7, big ? 46 : 28);
-      ctx.restore();
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.font = `600 62px ${FONT}`;
+    for (let i = 1; i <= 12; i++) {
+      const ang = (i / 12) * Math.PI * 2;
+      ctx.fillText(String(i), c + Math.sin(ang) * c * 0.76, c - Math.cos(ang) * c * 0.76 + 3);
     }
   });
 }
 
-export function signTexture() {
-  return tex(1200, 640, (ctx, w, h) => {
+const SIGN_FONT = '"League Spartan", "Arial Black", "Trebuchet MS", sans-serif';
+
+/**
+ * Letrero de la pared. Con `shadow` devuelve la sombra difuminada que proyecta;
+ * sin él, las letras lisas en blanco para un material que recibe la luz de la lámpara.
+ */
+export function signTexture(shadow = false) {
+  return tex(2000, 1066, (ctx, w, h) => {
     ctx.clearRect(0, 0, w, h);
     ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.lineJoin = 'round';
-    ctx.shadowColor = 'rgba(60, 28, 14, 0.75)';
-    ctx.shadowBlur = 22;
-    ctx.shadowOffsetY = 6;
+    ctx.textBaseline = 'alphabetic';
+    if (shadow) ctx.filter = 'blur(9px)';
+    ctx.fillStyle = shadow ? '#2a1208' : '#ffffff';
     // Escribe una línea reduciendo la letra hasta que quepa en el ancho
-    const line = (text, y, size, weight, stroke) => {
-      let px = size;
+    const fit = (text, size, weight, spacing) => {
+      let px = size + 4;
+      ctx.letterSpacing = `${spacing}px`;
       do {
-        ctx.font = `${weight} ${px}px ${FONT}`;
         px -= 4;
-      } while (ctx.measureText(text).width > w - 70 && px > 20);
-      ctx.strokeStyle = 'rgba(74, 34, 16, 0.6)';
-      ctx.lineWidth = stroke;
-      ctx.strokeText(text, w / 2, y);
-      ctx.fillStyle = '#ffffff';
-      ctx.fillText(text, w / 2, y);
+        ctx.font = `${weight} ${px}px ${SIGN_FONT}`;
+      } while (ctx.measureText(text).width > w - 110 && px > 20);
+      return px;
     };
-    line('¡HOLA! SOY', 125, 190, 600, 12);
-    line('MARÍA ANTONIA', 335, 190, 600, 12);
-    line('Psicóloga · Generalista de Recursos Humanos', 525, 66, 600, 8);
+    const line = (text, y, px, weight, spacing) => {
+      ctx.letterSpacing = `${spacing}px`;
+      ctx.font = `${weight} ${px}px ${SIGN_FONT}`;
+      ctx.fillText(text, w / 2 + spacing / 2, y);
+    };
+    // Las dos líneas grandes comparten tamaño: el de la más larga
+    const big = fit('MARÍA ANTONIA', 330, 800, 6);
+    line('¡HOLA! SOY', 370, big, 800, 6);
+    line('MARÍA ANTONIA', 370 + big * 1.12, big, 800, 6);
+    line('Psicóloga · Generalista de Recursos Humanos', 930, fit('Psicóloga · Generalista de Recursos Humanos', 92, 700, 2), 700, 2);
+    if (!shadow) {
+      // Resplandor de la lámpara: tiñe de naranja las letras más cercanas a ella
+      ctx.globalCompositeOperation = 'source-atop';
+      const glow = ctx.createRadialGradient(w * 0.5, h * 1.12, h * 0.1, w * 0.5, h * 1.12, h * 0.95);
+      glow.addColorStop(0, 'rgba(255, 150, 45, 0.95)');
+      glow.addColorStop(0.35, 'rgba(255, 160, 60, 0.8)');
+      glow.addColorStop(0.7, 'rgba(255, 175, 90, 0.35)');
+      glow.addColorStop(1, 'rgba(255, 190, 120, 0)');
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, w, h);
+      ctx.globalCompositeOperation = 'source-over';
+    }
   });
 }
 

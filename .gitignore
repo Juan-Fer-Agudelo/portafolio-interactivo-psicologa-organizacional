@@ -3,3 +3,6 @@ dist
 .DS_Store
 *.local
 .env
+
+# Canción original completa (solo se publica public/musica.mp3)
+Song/

@@ -31,7 +31,7 @@
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
     <link
-      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=Nunito:wght@400;600;700&display=swap"
+      href="https://fonts.googleapis.com/css2?family=Fredoka:wght@400;500;600&family=League+Spartan:wght@700;800&family=Nunito:wght@400;600;700&display=swap"
       rel="stylesheet"
     />
     <link rel="stylesheet" href="/src/style.css" />
@@ -85,10 +85,20 @@
 
     <!-- Carga -->
     <div class="loading-container">
-      <div class="loading-walker" aria-hidden="true">
-        <span></span><span></span><span></span>
-      </div>
       <div class="loading-percentage">0%</div>
+      <svg class="loading-cat" viewBox="0 0 160 120" aria-hidden="true">
+        <path class="cat-tail" d="M42 68 C 24 68, 14 52, 22 36" />
+        <rect class="cat-leg far leg-a" x="46" y="72" width="13" height="38" rx="6.5" />
+        <rect class="cat-leg far leg-b" x="94" y="72" width="13" height="38" rx="6.5" />
+        <g class="cat-body">
+          <rect x="34" y="54" width="84" height="34" rx="17" />
+          <ellipse cx="124" cy="48" rx="23" ry="20" />
+          <path d="M105 40 L107 17 L120 31 Z" stroke-width="4" stroke-linejoin="round" stroke="#e9e0d6" />
+          <path d="M129 31 L142 18 L144 42 Z" stroke-width="4" stroke-linejoin="round" stroke="#e9e0d6" />
+        </g>
+        <rect class="cat-leg leg-b" x="40" y="72" width="13" height="38" rx="6.5" />
+        <rect class="cat-leg leg-a" x="100" y="72" width="13" height="38" rx="6.5" />
+      </svg>
     </div>
 
     <!-- Controles superiores -->

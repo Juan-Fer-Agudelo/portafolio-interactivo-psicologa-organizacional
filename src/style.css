@@ -107,32 +107,58 @@ a {
   font-weight: 500;
   letter-spacing: 0.04em;
 }
-.loading-walker {
-  display: flex;
-  gap: 10px;
+.loading-cat {
+  width: 150px;
+  height: auto;
+  overflow: visible;
+  fill: #e9e0d6;
+  animation: cat-bob 0.5s ease-in-out infinite;
 }
-.loading-walker span {
-  width: 16px;
-  height: 16px;
-  border-radius: 50%;
-  background: var(--mustard);
-  animation: hop 0.9s ease-in-out infinite;
+.loading-cat .cat-tail {
+  fill: none;
+  stroke: #e9e0d6;
+  stroke-width: 13;
+  stroke-linecap: round;
+  transform-box: fill-box;
+  transform-origin: 100% 100%;
+  animation: cat-tail 1s ease-in-out infinite;
 }
-.loading-walker span:nth-child(2) {
-  background: var(--terracotta);
-  animation-delay: 0.15s;
+.loading-cat .cat-leg {
+  transform-box: fill-box;
+  transform-origin: 50% 6px;
+  animation: cat-step 1s ease-in-out infinite;
 }
-.loading-walker span:nth-child(3) {
-  background: var(--sage);
-  animation-delay: 0.3s;
+.loading-cat .cat-leg.far {
+  fill: #cbbfb3;
 }
-@keyframes hop {
+.loading-cat .leg-b {
+  animation-delay: -0.5s;
+}
+@keyframes cat-step {
+  0%,
+  100% {
+    transform: rotate(30deg);
+  }
+  50% {
+    transform: rotate(-30deg);
+  }
+}
+@keyframes cat-bob {
   0%,
   100% {
     transform: translateY(0);
   }
   50% {
-    transform: translateY(-16px);
+    transform: translateY(-3px);
+  }
+}
+@keyframes cat-tail {
+  0%,
+  100% {
+    transform: rotate(-8deg);
+  }
+  50% {
+    transform: rotate(10deg);
   }
 }
 
@@ -762,7 +788,8 @@ a {
 
 @media (prefers-reduced-motion: reduce) {
   .scroll-hint,
-  .loading-walker span {
+  .loading-cat,
+  .loading-cat * {
     animation: none;
   }
 }
