@@ -674,7 +674,7 @@ export class Room {
           roughness: 0.7,
           emissive: new THREE.Color('#fff1dc'),
           emissiveMap: glow,
-          emissiveIntensity: 1.2,
+          emissiveIntensity: 0.35,
         })
       );
       art.position.z = 0.125;
