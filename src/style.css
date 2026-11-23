@@ -578,7 +578,7 @@ a {
 }
 .project-section {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 18px;
 }
 .project-section.hidden {
@@ -612,46 +612,26 @@ a {
   color: var(--ink);
   text-decoration: none;
 }
-.project-image {
-  aspect-ratio: 16 / 10;
+.project-photo {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 16 / 9;
+  object-fit: cover;
   border-radius: 12px;
-  background: linear-gradient(135deg, #e0a071, #b5562f);
-  position: relative;
-  overflow: hidden;
+  background: var(--paper-2);
 }
-.project-image::before,
-.project-image::after {
-  content: "";
-  position: absolute;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.28);
+.project-status {
+  align-self: flex-start;
+  padding: 4px 12px;
+  border-radius: 999px;
+  background: var(--sage);
+  color: #fff;
+  font-weight: 700;
+  font-size: 0.8rem;
 }
-.project-image::before {
-  width: 60%;
-  aspect-ratio: 1;
-  right: -18%;
-  top: -30%;
-}
-.project-image::after {
-  width: 34%;
-  aspect-ratio: 1;
-  left: 10%;
-  bottom: -14%;
-}
-.tone-2 {
-  background: linear-gradient(135deg, #eeb48a, #cf6a32);
-}
-.tone-3 {
-  background: linear-gradient(135deg, #f4d58f, #e9b44c);
-}
-.tone-4 {
-  background: linear-gradient(135deg, #c98a8a, #8c3b3b);
-}
-.tone-5 {
-  background: linear-gradient(135deg, #e3c08a, #a8672f);
-}
-.tone-6 {
-  background: linear-gradient(135deg, #eab08f, #c2552d);
+.project-item p strong {
+  color: var(--sage);
 }
 
 /* Contacto */
@@ -769,6 +749,14 @@ a {
   }
   .tab-long {
     display: none;
+  }
+  .toggle-buttons {
+    display: flex;
+  }
+  .toggle-buttons button {
+    flex: 1;
+    padding: 8px 6px;
+    font-size: 0.92rem;
   }
 }
 

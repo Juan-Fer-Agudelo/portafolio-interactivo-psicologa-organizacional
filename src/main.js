@@ -123,10 +123,10 @@ const onScroll = () => {
 window.addEventListener('scroll', onScroll, { passive: true });
 
 /* ---------- Pestañas de proyectos ---------- */
-const tabs = [
-  { button: $('#tab-a-btn'), section: $('#tab-a') },
-  { button: $('#tab-b-btn'), section: $('#tab-b') },
-];
+const tabs = [...document.querySelectorAll('.toggle-buttons [role="tab"]')].map((button) => ({
+  button,
+  section: document.getElementById(button.getAttribute('aria-controls')),
+}));
 tabs.forEach((tab) => {
   tab.button.addEventListener('click', () => {
     tabs.forEach((other) => {
