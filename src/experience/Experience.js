@@ -16,6 +16,16 @@ const CONFIG = {
   minHalfWidth: 4.4, // ancho mínimo de pared visible a cada lado
   maxZ: 20,
   fly: { duration: 0.9, maxDuration: 1.7, fill: 0.5, minDistance: 2.4 },
+  // En pantallas verticales la pared no cabe a lo ancho: la cámara recorre estas
+  // paradas con el scroll. `at` es el avance del scroll, `half` el medio ancho visible.
+  portraitBelow: 0.8, // relación ancho/alto por debajo de la cual se usa este recorrido
+  portraitMaxZ: 27,
+  portrait: [
+    { at: 0.0, x: -1.85, y: 0.5, half: 2.65 }, // saludo, repisa, gato y lámpara
+    { at: 0.24, x: 2.2, y: 0.1, half: 2.4 }, // cuadros y botón de cambiar gato
+    { at: 0.62, x: 1.22, y: -4.9, half: 3.2 }, // escritorio
+    { at: 1.0, x: -0.6, y: -8.6, half: 3.65 }, // piso: cama, sobre y luz de noche
+  ],
 };
 
 export class Experience {
@@ -77,9 +87,30 @@ export class Experience {
     return THREE.MathUtils.clamp(CONFIG.minHalfWidth / (tan * aspect), CONFIG.cameraZ, CONFIG.maxZ);
   }
 
+  isPortrait() {
+    return this.sizes.width / this.sizes.height < CONFIG.portraitBelow;
+  }
+
   restPosition() {
+    if (this.isPortrait()) return this.portraitPosition();
     const progress = (window.scrollY / this.sizes.height) * CONFIG.scrollFactor;
     return new THREE.Vector3(0, CONFIG.cameraY - progress, this.restZ());
+  }
+
+  /** Posición de la cámara en vertical: interpola entre las paradas según el scroll. */
+  portraitPosition() {
+    const stops = CONFIG.portrait;
+    const progress = this.scrollProgress();
+    let i = 0;
+    while (i < stops.length - 2 && progress > stops[i + 1].at) i++;
+    const a = stops[i];
+    const b = stops[i + 1];
+    const k = THREE.MathUtils.smoothstep(progress, a.at, b.at);
+    const lerp = THREE.MathUtils.lerp;
+    const aspect = this.sizes.width / this.sizes.height;
+    const tan = Math.tan(THREE.MathUtils.degToRad(CONFIG.fov / 2));
+    const z = Math.min(lerp(a.half, b.half, k) / (tan * aspect), CONFIG.portraitMaxZ);
+    return new THREE.Vector3(lerp(a.x, b.x, k), lerp(a.y, b.y, k), z);
   }
 
   /** Avance del scroll entre 0 (arriba) y 1 (abajo). */

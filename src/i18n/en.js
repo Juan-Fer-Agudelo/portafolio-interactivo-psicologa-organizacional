@@ -2,8 +2,6 @@
 // sitio (index.html, etiquetas de la escena 3D y mensajes de main.js).
 export default {
   /* ---------- Interfaz ---------- */
-  'Este sitio se disfruta mejor en computador': 'This site is best enjoyed on a computer',
-  Entendido: 'Got it',
   'Sobre mí': 'About me',
   Experiencia: 'Experience',
   Formación: 'Education',

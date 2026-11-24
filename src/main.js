@@ -229,15 +229,6 @@ form.addEventListener('submit', async (e) => {
   }
 });
 
-/* ---------- Aviso móvil ---------- */
-const mobileNotice = $('.mobile-container');
-if (window.matchMedia('(pointer: coarse)').matches || window.innerWidth < 760) {
-  mobileNotice.style.display = 'flex';
-}
-$('#mobile-button').addEventListener('click', () => {
-  mobileNotice.style.display = 'none';
-});
-
 /* ---------- Carga ---------- */
 const loading = $('.loading-container');
 const percentage = $('.loading-percentage');

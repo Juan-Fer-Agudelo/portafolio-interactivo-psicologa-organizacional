@@ -162,31 +162,6 @@ a {
   }
 }
 
-/* ---------- Aviso móvil ---------- */
-.mobile-container {
-  position: fixed;
-  inset: 0;
-  z-index: 60;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  gap: 20px;
-  padding: 24px;
-  text-align: center;
-  background: rgba(36, 24, 18, 0.94);
-  color: var(--paper);
-  font-family: var(--font-title);
-  font-size: 1.3rem;
-}
-.mobile-container button {
-  padding: 10px 28px;
-  border-radius: 999px;
-  background: var(--mustard);
-  color: var(--ink);
-  font-weight: 600;
-}
-
 /* ---------- Controles superiores ---------- */
 .top-controls {
   position: fixed;
@@ -868,4 +843,40 @@ a {
 .nav-list .lang-switch button[aria-pressed='true'] {
   background: var(--sage);
   color: #fff;
+}
+
+/* ---------- Pantallas verticales (celular) ---------- */
+@media (max-aspect-ratio: 4 / 5) {
+  /* El recorrido tiene una parada más (repisa, cuadros, escritorio, piso) */
+  .height-div {
+    height: 360vh;
+  }
+}
+/* En pantallas táctiles no hay cursor: la etiqueta flotante no aplica */
+@media (hover: none) {
+  .hover-label {
+    display: none;
+  }
+}
+@media (max-width: 560px) {
+  .panel {
+    width: 94vw;
+    padding: 26px 20px;
+    max-height: 88dvh;
+    border-radius: 20px;
+  }
+  .about-photo {
+    margin: 0 auto;
+  }
+  .about-description,
+  .job-description {
+    font-size: 0.97rem;
+    line-height: 1.55;
+  }
+  .job-description ul {
+    padding-left: 16px;
+  }
+  .project-item {
+    padding: 14px;
+  }
 }
